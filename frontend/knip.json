@@ -1,0 +1,4 @@
+{
+  "project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+  "ignore": ["src/generated/**"]
+}

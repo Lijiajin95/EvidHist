@@ -1,0 +1,13 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "coverageAnalysis": "off",
+  "vitest": { "related": false },
+  "mutate": ["src/domain/**/*.ts", "!src/generated/**"],
+  "reporters": ["clear-text", "json", "html"],
+  "thresholds": { "high": 95, "low": 90, "break": 90 },
+  "timeoutMS": 5000,
+  "timeoutFactor": 1.5,
+  "concurrency": 2,
+  "fileLogLevel": "warn"
+}

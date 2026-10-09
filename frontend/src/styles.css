@@ -1,0 +1,51 @@
+body {
+  font-family: system-ui, "PingFang SC", sans-serif;
+  line-height: 1.6;
+  margin: 0 auto;
+  max-width: 46rem;
+  padding: 1.5rem;
+}
+
+.app h1 {
+  font-size: 1.5rem;
+}
+
+form {
+  display: grid;
+  gap: 0.25rem;
+  margin: 1rem 0;
+}
+
+form textarea {
+  font-family: inherit;
+}
+
+label {
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+button {
+  margin: 0.75rem 0.5rem 0 0;
+  padding: 0.35rem 1rem;
+}
+
+mark {
+  background: #ffe08a;
+  padding: 0 0.1em;
+}
+
+:focus-visible {
+  outline: 3px solid #4a90d9;
+  outline-offset: 2px;
+}
+
+.scope-note {
+  color: #555;
+  font-size: 0.9rem;
+}
+
+[role="alert"],
+[role="status"] {
+  min-height: 1.6em;
+}
