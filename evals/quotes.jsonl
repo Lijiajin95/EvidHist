@@ -1,0 +1,4 @@
+{"id":"spring","task":"提取甲赴任季节的原文位置；返回 Citation JSON，材料不足时返回 null。","source":{"version_id":"a","text":"春，甲赴任"},"expected":{"version_id":"a","start":0,"end":1,"exact_quote":"春"}}
+{"id":"unicode","task":"定位原文中的扩展汉字𠀀。","source":{"version_id":"b","text":"甲𠀀乙"},"expected":{"version_id":"b","start":1,"end":2,"exact_quote":"𠀀"}}
+{"id":"repeated","task":"定位乙说的秋；注意原文也含有甲说的秋。","source":{"version_id":"c","text":"甲说秋；乙说秋"},"expected":{"version_id":"c","start":6,"end":7,"exact_quote":"秋"}}
+{"id":"unknown","task":"甲赴任的具体年月是什么？材料没有记载时返回 null。","source":{"version_id":"d","text":"甲曾赴任"},"expected":null}

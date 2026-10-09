@@ -1,0 +1,19 @@
+name: evidhist-tests
+services:
+  postgres:
+    # pg18 multi-platform image digest verified on 2026-10-09.
+    image: pgvector/pgvector:pg18@sha256:2358fcba361ed2233a5ed81b5fe4ca779ccb304120ce531a3bf51c0ed7e2bc11
+    environment:
+      POSTGRES_USER: evidhist
+      POSTGRES_PASSWORD: evidhist
+      POSTGRES_DB: evidhist_test
+    ports:
+      - "127.0.0.1:${EVIDHIST_TEST_PORT:-55432}:5432"
+    tmpfs:
+      - /var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U evidhist -d evidhist_test"]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+

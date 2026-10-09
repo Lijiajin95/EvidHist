@@ -1,0 +1,31 @@
+.venv/
+.toolchain/
+.cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+mutants/
+dist/
+build/
+*.egg-info/
+.env
+.env.*
+!.env.example
+reports/
+node_modules/
+.DS_Store
+# 本地采集脚本与史料快照，按用户要求不纳入版本库
+crawler/
+
+# frontend build and tool artifacts
+frontend/dist/
+frontend/coverage/
+frontend/.stryker-tmp/
+frontend/playwright-report/
+frontend/test-results/
+frontend/reports/

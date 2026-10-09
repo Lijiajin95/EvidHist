@@ -1,0 +1,45 @@
+schema_version = 1
+
+[scope]
+handwritten_roots = ["src", "scripts", "tests", "frontend/src", "frontend/tests"]
+extensions = [".py", ".ts", ".tsx", ".js", ".jsx"]
+generated_roots = ["frontend/src/generated"]
+
+[structure]
+function_effective_lines_warn = 40
+function_effective_lines_max = 50
+exclude_blank_lines = true
+exclude_comment_only_lines = true
+exclude_python_docstrings = true
+include_signature = true
+include_nested_function_ranges = true
+public_interfaces_warn = 10
+public_interfaces_max = 20
+public_interface_mode = "own-methods-and-properties"
+file_physical_lines_warn = 300
+file_physical_lines_max = 500
+reviewed_file_exception_ceiling = 1000
+reviewed_exceptions = []
+
+# Review-only hints (not blocking): values follow the Ruff/Pylint defaults named in the
+# handoff. They surface in the machine report so maintainers can act without CI failing.
+[structure.review_hints]
+return_statements_max = 6
+statements_max = 50
+local_variables_max = 15
+
+[coverage]
+line_min = 90
+branch_min = 90
+changed_line_min = 90
+
+[mutation]
+general_killed_min = 90
+critical_unreviewed_survivors_max = 0
+unresolved_incomplete_states_max = 0
+require_nonempty_report = true
+
+[property_tests]
+local_examples = 100
+ci_examples = 300
+extended_examples = 1000
