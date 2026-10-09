@@ -4,7 +4,9 @@ NPM := env npm_config_cache=$(CURDIR)/.cache/npm npm --prefix $(CURDIR)/frontend
 TEST_DATABASE_URL ?= postgresql+psycopg://evidhist:evidhist@127.0.0.1:55432/evidhist_test
 FAST_TESTS := tests/unit tests/property tests/component tests/scenario
 
-.PHONY: setup format lint typecheck test check db-up db-down test-integration test-system coverage mutation audit sast security eval-fixture hooks precommit run commit-policy-config api-schema api-schema-check structure-metrics import-lint deptry pylint coverage-thresholds frontend-setup frontend-check frontend-e2e frontend-mutation frontend-audit frontend-run
+DEMO_DATABASE_URL ?= postgresql+psycopg://evidhist:evidhist@127.0.0.1:55433/evidhist_demo
+
+.PHONY: setup format lint typecheck test check db-up db-down test-integration test-system coverage mutation audit sast security eval-fixture hooks precommit run commit-policy-config api-schema api-schema-check structure-metrics import-lint deptry pylint coverage-thresholds frontend-setup frontend-check frontend-e2e frontend-mutation frontend-audit frontend-run migrate demo-up demo-down demo-migrate demo-seed demo-run
 
 setup:
 	$(UV) sync --frozen --default-index https://pypi.org/simple --group mutation --group security
@@ -95,6 +97,24 @@ run:
 
 frontend-run:
 	$(NPM) run dev
+
+migrate:
+	.venv/bin/python scripts/migrate.py --database-url '$(if $(EVIDHIST_DATABASE_URL),$(EVIDHIST_DATABASE_URL),$(TEST_DATABASE_URL))'
+
+demo-up:
+	.venv/bin/python scripts/demo_database.py up
+
+demo-down:
+	.venv/bin/python scripts/demo_database.py down
+
+demo-migrate:
+	.venv/bin/python scripts/migrate.py --database-url '$(DEMO_DATABASE_URL)'
+
+demo-seed:
+	.venv/bin/python scripts/seed_demo.py
+
+demo-run:
+	EVIDHIST_DATABASE_URL='$(DEMO_DATABASE_URL)' .venv/bin/uvicorn evidhist.api:app --host 127.0.0.1 --port 8000
 
 frontend-setup:
 	$(NPM) install

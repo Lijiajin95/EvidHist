@@ -29,3 +29,4 @@ frontend/.stryker-tmp/
 frontend/playwright-report/
 frontend/test-results/
 frontend/reports/
+frontend/stryker.log

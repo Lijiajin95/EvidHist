@@ -65,7 +65,7 @@ select = [
   "PLR0912",
   "PLR0913",
 ]
-allowed-confusables = ["，", "：", "；", "。"]
+allowed-confusables = ["，", "：", "；", "。", "（", "）"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
@@ -73,6 +73,10 @@ max-complexity = 10
 [tool.ruff.lint.pylint]
 max-args = 5
 max-branches = 12
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI's dependency-injection idiom puts Depends(...) in parameter defaults.
+"src/evidhist/api*.py" = ["B008"]
 
 [tool.pyright]
 include = ["src", "tests", "scripts"]
@@ -112,7 +116,7 @@ fail_under = 90
 
 [tool.mutmut]
 source_paths = ["src/evidhist/"]
-only_mutate = ["src/evidhist/domain/citations.py"]
+only_mutate = ["src/evidhist/domain/citations.py", "src/evidhist/domain/materials.py"]
 pytest_add_cli_args_test_selection = ["tests/unit/", "tests/property/"]
 pytest_add_cli_args = ["--import-mode=importlib", "-o", "addopts="]
 also_copy = ["tests", "evals", "config", "scripts", "contracts"]

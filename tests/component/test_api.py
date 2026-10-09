@@ -1,3 +1,5 @@
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import SQLAlchemyError
@@ -86,3 +88,28 @@ def test_api_schema_rejects_string_offsets_and_extra_fields() -> None:
         )
 
     assert response.status_code == 422
+
+
+def test_lone_surrogate_in_request_is_a_422_not_a_server_error() -> None:
+    """A client that sends a broken half of a surrogate pair gets a readable 422."""
+    payload = json.dumps(
+        {
+            "source": {"version_id": "a", "text": "甲𠀀乙"},
+            "citation": {
+                "version_id": "a",
+                "start": 4,
+                "end": 5,
+                "exact_quote": "\ud840",
+            },
+        },
+        ensure_ascii=True,
+    )
+    with TestClient(create_app(database=AvailableDatabase())) as client:
+        response = client.post(
+            "/v1/quotes/locate",
+            content=payload.encode("ascii"),
+            headers={"Content-Type": "application/json"},
+        )
+
+    assert response.status_code == 422
+    assert "detail" in response.json()
