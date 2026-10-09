@@ -82,6 +82,15 @@ make run
 
 详细方法论见[架构文档第 12、13 章](architecture-analysis-2026-10-09.md#12-测试方法论用不同层次验证不同承诺)。
 
+## v0.1 业务闭环（2026-10-10 夜间）
+
+「史料与引用工作台」：材料（含不可变文本版本，内容散列为身份、自然键幂等）→ 版本文本选区引文（UTF-16→码点转换在 `frontend/src/domain/offsets.ts`，代理对边界向后吸附且引文按码点对齐防孤立代理字符）→ 后端按持久版本校验（`POST /v1/versions/{id}/locate`）→ 论断与证据绑定（支持/反对/提及/证据不足，界面明示「未核查」不声称史实证实）→ 多来源并列展示，刷新/重启后回查。
+
+- 数据库：`migrations/*.sql` 事务性迁移（`schema_migrations` 记账，重跑安全）；`make migrate` / `scripts/migrate.py --dry-run`。全新库迁移顺序与幂等由 `tests/integration/test_migrations.py` 在临时数据库验证。
+- 演示环境：`make demo-up`（持久卷容器 127.0.0.1:55433，PG18 挂载 `/var/lib/postgresql`）→ `demo-migrate` → `demo-seed`（合成材料，明确标注非史籍）→ `demo-run`（8000 端口）。停止 `make demo-down` 保留数据卷。
+- 孤立 UTF-16 代理字符：请求含代理字符时后端返回 422（`api.py` 的 RequestValidationError 处理器用 `ensure_ascii` 渲染，避免回显值导致 500）；前端选区按码点对齐从源头防呆。组件回归用例在 `tests/component/test_api.py`。
+- 运行入口与验证矩阵详见 [v0.1 交付说明](v0.1-delivery.md)。
+
 ## 结构度量与新增质量门槛
 
 ```bash
