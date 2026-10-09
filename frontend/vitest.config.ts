@@ -17,7 +17,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/**/*.test.{ts,tsx}", "src/generated/**", "src/main.tsx"],
+      // main.tsx is the bootstrap entry; pendingQuote.ts is a type-only module:
+      // neither contains behavior to cover.
+      exclude: [
+        "src/**/*.test.{ts,tsx}",
+        "src/generated/**",
+        "src/main.tsx",
+        "src/domain/pendingQuote.ts",
+      ],
       reporter: ["text", "json", "lcov"],
       thresholds: { lines: 90, branches: 90, functions: 90, statements: 90 },
     },

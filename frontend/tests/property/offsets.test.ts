@@ -4,15 +4,38 @@ import {
   codePointLength,
   splitByCodePointRange,
   utf16IndexFromCodePoint,
+  utf16IndexToCodePoint,
 } from "../../src/domain/offsets";
 import { propertyParameters } from "./propertyParameters";
 
-/** UTF-16 strings with astral and BMP characters exercising the offset mapping. */
+/** UTF-16 strings with astral, BMP, combining and newline characters. */
 const textArbitrary = fc
-  .array(fc.constantFrom("甲", "乙", "𠀀", "𠀁", "a", "\u0301", "𠮷"), { minLength: 0 })
+  .array(fc.constantFrom("甲", "乙", "𠀀", "𠀁", "a", "\u0301", "𠮷", "\n"), { minLength: 0 })
   .map((characters) => characters.join(""));
 
 describe("offset mapping properties", () => {
+  it("the utf16→code point mapping is the inverse at code point boundaries", () => {
+    fc.assert(
+      fc.property(textArbitrary, fc.nat(), (text, index) => {
+        const bounded = Math.min(index, codePointLength(text));
+        const utf16 = utf16IndexFromCodePoint(text, bounded);
+        return utf16IndexToCodePoint(text, utf16) === bounded;
+      }),
+      propertyParameters,
+    );
+  });
+
+  it("utf16→code point counts the code points before a boundary and clamps at the end", () => {
+    fc.assert(
+      fc.property(textArbitrary, fc.nat(), (text, index) => {
+        const bounded = Math.min(index, text.length);
+        const expected = Array.from(text.slice(0, bounded)).length;
+        return utf16IndexToCodePoint(text, bounded) === expected;
+      }),
+      propertyParameters,
+    );
+  });
+
   it("joining the highlight segments reproduces the original text", () => {
     fc.assert(
       fc.property(textArbitrary, fc.nat(), fc.nat(), (text, start, end) => {

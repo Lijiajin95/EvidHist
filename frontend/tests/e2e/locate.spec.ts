@@ -1,6 +1,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+async function openTool(page: Page): Promise<void> {
+  await page.goto("/");
+  await page.getByRole("button", { name: "引文定位工具" }).click();
+}
+
 async function fillForm(page: Page, overrides: Partial<Record<string, string>> = {}) {
   const values = {
     version: "史記-001",
@@ -19,7 +24,7 @@ async function fillForm(page: Page, overrides: Partial<Record<string, string>> =
 }
 
 test("locates a supplementary-plane quote end to end and highlights it", async ({ page }) => {
-  await page.goto("/");
+  await openTool(page);
   await fillForm(page);
   await page.getByRole("button", { name: "校验位置" }).click();
 
@@ -30,7 +35,7 @@ test("locates a supplementary-plane quote end to end and highlights it", async (
 });
 
 test("a version mismatch is shown as a readable error, not raw JSON", async ({ page }) => {
-  await page.goto("/");
+  await openTool(page);
   await fillForm(page, {});
   await page.getByLabel("引文版本编号").fill("漢書-002");
   await page.getByRole("button", { name: "校验位置" }).click();
@@ -41,7 +46,7 @@ test("a version mismatch is shown as a readable error, not raw JSON", async ({ p
 });
 
 test("the screen has no serious or critical axe violations", async ({ page }) => {
-  await page.goto("/");
+  await openTool(page);
   await fillForm(page);
   await page.getByRole("button", { name: "校验位置" }).click();
   await expect(page.getByTestId("locate-result")).toBeVisible();
@@ -54,7 +59,7 @@ test("the screen has no serious or critical axe violations", async ({ page }) =>
 });
 
 test("keyboard-only users can reach and operate the form", async ({ page }) => {
-  await page.goto("/");
+  await openTool(page);
   await page.keyboard.press("Tab");
 
   const focused = page.locator(":focus");

@@ -35,6 +35,275 @@
         "title": "Citation",
         "type": "object"
       },
+      "ClaimCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "statement": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement"
+        ],
+        "title": "ClaimCreateRequest",
+        "type": "object"
+      },
+      "ClaimCreatedOut": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "$ref": "#/components/schemas/ClaimOut"
+          },
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "claim",
+          "created"
+        ],
+        "title": "ClaimCreatedOut",
+        "type": "object"
+      },
+      "ClaimDetailOut": {
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "$ref": "#/components/schemas/ClaimOut"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceOut"
+            },
+            "title": "Evidence",
+            "type": "array"
+          }
+        },
+        "required": [
+          "claim",
+          "evidence"
+        ],
+        "title": "ClaimDetailOut",
+        "type": "object"
+      },
+      "ClaimOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "review_status",
+          "created_at"
+        ],
+        "title": "ClaimOut",
+        "type": "object"
+      },
+      "ClaimSummaryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence_count": {
+            "title": "Evidence Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
+          "statement": {
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "statement",
+          "review_status",
+          "evidence_count",
+          "created_at"
+        ],
+        "title": "ClaimSummaryOut",
+        "type": "object"
+      },
+      "EvidenceBindRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "exact_quote": {
+            "minLength": 1,
+            "title": "Exact Quote",
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 500,
+            "title": "Note",
+            "type": "string"
+          },
+          "relation": {
+            "enum": [
+              "supports",
+              "contradicts",
+              "mentions",
+              "insufficient"
+            ],
+            "title": "Relation",
+            "type": "string"
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "start",
+          "end",
+          "relation",
+          "note",
+          "exact_quote"
+        ],
+        "title": "EvidenceBindRequest",
+        "type": "object"
+      },
+      "EvidenceCreatedOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceOut"
+          }
+        },
+        "required": [
+          "evidence",
+          "created"
+        ],
+        "title": "EvidenceCreatedOut",
+        "type": "object"
+      },
+      "EvidenceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "claim_id": {
+            "format": "uuid",
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "relation": {
+            "title": "Relation",
+            "type": "string"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_origin": {
+            "title": "Source Origin",
+            "type": "string"
+          },
+          "source_title": {
+            "title": "Source Title",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "version_id": {
+            "format": "uuid",
+            "title": "Version Id",
+            "type": "string"
+          },
+          "version_label": {
+            "title": "Version Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "claim_id",
+          "version_id",
+          "source_id",
+          "source_title",
+          "source_origin",
+          "version_label",
+          "start",
+          "end",
+          "quote",
+          "relation",
+          "note",
+          "created_at"
+        ],
+        "title": "EvidenceOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -51,12 +320,13 @@
       "Health": {
         "properties": {
           "status": {
-            "const": "ok",
-            "default": "ok",
             "title": "Status",
             "type": "string"
           }
         },
+        "required": [
+          "status"
+        ],
         "title": "Health",
         "type": "object"
       },
@@ -75,6 +345,33 @@
           "citation"
         ],
         "title": "LocateQuoteRequest",
+        "type": "object"
+      },
+      "LocateVersionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "exact_quote": {
+            "minLength": 1,
+            "title": "Exact Quote",
+            "type": "string"
+          },
+          "start": {
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "exact_quote"
+        ],
+        "title": "LocateVersionRequest",
         "type": "object"
       },
       "QuoteLocation": {
@@ -110,6 +407,201 @@
           "exact_quote"
         ],
         "title": "QuoteLocation",
+        "type": "object"
+      },
+      "QuoteLocationOut": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "exact_quote": {
+            "title": "Exact Quote",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "version_id": {
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "start",
+          "end",
+          "exact_quote"
+        ],
+        "title": "QuoteLocationOut",
+        "type": "object"
+      },
+      "SourceCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "initial_label": {
+            "maxLength": 100,
+            "title": "Initial Label",
+            "type": "string"
+          },
+          "initial_text": {
+            "minLength": 1,
+            "title": "Initial Text",
+            "type": "string"
+          },
+          "origin": {
+            "maxLength": 500,
+            "title": "Origin",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "usage_terms": {
+            "maxLength": 500,
+            "title": "Usage Terms",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "origin",
+          "usage_terms",
+          "initial_text",
+          "initial_label"
+        ],
+        "title": "SourceCreateRequest",
+        "type": "object"
+      },
+      "SourceDetailOut": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/SourceOut"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/VersionOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "versions"
+        ],
+        "title": "SourceDetailOut",
+        "type": "object"
+      },
+      "SourceOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "usage_terms": {
+            "title": "Usage Terms",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "origin",
+          "usage_terms",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "SourceOut",
+        "type": "object"
+      },
+      "SourceSummaryOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "usage_terms": {
+            "title": "Usage Terms",
+            "type": "string"
+          },
+          "version_count": {
+            "title": "Version Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "origin",
+          "usage_terms",
+          "version_count",
+          "created_at"
+        ],
+        "title": "SourceSummaryOut",
+        "type": "object"
+      },
+      "SourceWithVersionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceOut"
+          },
+          "version": {
+            "$ref": "#/components/schemas/VersionOut"
+          }
+        },
+        "required": [
+          "source",
+          "version",
+          "created"
+        ],
+        "title": "SourceWithVersionOut",
         "type": "object"
       },
       "TextVersion": {
@@ -173,6 +665,106 @@
         ],
         "title": "ValidationError",
         "type": "object"
+      },
+      "VersionContentOut": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "content_sha256": {
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_id",
+          "label",
+          "content_sha256",
+          "created_at",
+          "content"
+        ],
+        "title": "VersionContentOut",
+        "type": "object"
+      },
+      "VersionCreateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "maxLength": 100,
+            "title": "Label",
+            "type": "string"
+          },
+          "text": {
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "text"
+        ],
+        "title": "VersionCreateRequest",
+        "type": "object"
+      },
+      "VersionOut": {
+        "additionalProperties": false,
+        "properties": {
+          "content_sha256": {
+            "title": "Content Sha256",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source_id",
+          "label",
+          "content_sha256",
+          "created_at"
+        ],
+        "title": "VersionOut",
+        "type": "object"
       }
     }
   },
@@ -218,8 +810,159 @@
         "summary": "Readiness"
       }
     },
+    "/v1/claims": {
+      "get": {
+        "operationId": "list_claims_endpoint_v1_claims_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClaimSummaryOut"
+                  },
+                  "title": "Response List Claims Endpoint V1 Claims Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Claims Endpoint"
+      },
+      "post": {
+        "description": "Create a claim; an exact-statement retry returns the stored claim with 200.",
+        "operationId": "create_claim_endpoint_v1_claims_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimCreatedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Claim Endpoint"
+      }
+    },
+    "/v1/claims/{claim_id}": {
+      "get": {
+        "operationId": "get_claim_endpoint_v1_claims__claim_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "claim_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Claim Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Claim Endpoint"
+      }
+    },
+    "/v1/claims/{claim_id}/evidence": {
+      "post": {
+        "description": "Validate the citation against the stored version, then bind it idempotently.",
+        "operationId": "bind_evidence_endpoint_v1_claims__claim_id__evidence_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "claim_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Claim Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceBindRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceCreatedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bind Evidence Endpoint"
+      }
+    },
     "/v1/quotes/locate": {
       "post": {
+        "description": "Tool endpoint: validate a citation against explicitly supplied text.",
         "operationId": "locate_v1_quotes_locate_post",
         "requestBody": {
           "content": {
@@ -254,6 +997,276 @@
           }
         },
         "summary": "Locate"
+      }
+    },
+    "/v1/sources": {
+      "get": {
+        "operationId": "list_sources_endpoint_v1_sources_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SourceSummaryOut"
+                  },
+                  "title": "Response List Sources Endpoint V1 Sources Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Sources Endpoint"
+      },
+      "post": {
+        "description": "Create a material with its first immutable text version; retries return 200.",
+        "operationId": "create_source_endpoint_v1_sources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceWithVersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Source Endpoint"
+      }
+    },
+    "/v1/sources/{source_id}": {
+      "get": {
+        "operationId": "get_source_endpoint_v1_sources__source_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Source Endpoint"
+      }
+    },
+    "/v1/sources/{source_id}/versions": {
+      "post": {
+        "description": "Add a new immutable version; identical content returns the stored version (200).",
+        "operationId": "add_version_endpoint_v1_sources__source_id__versions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Version Endpoint"
+      }
+    },
+    "/v1/versions/{version_id}": {
+      "get": {
+        "operationId": "get_version_endpoint_v1_versions__version_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionContentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Version Endpoint"
+      }
+    },
+    "/v1/versions/{version_id}/locate": {
+      "post": {
+        "description": "Validate a citation against the persisted version text (the product flow).",
+        "operationId": "locate_version_endpoint_v1_versions__version_id__locate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocateVersionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteLocationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Locate Version Endpoint"
       }
     }
   }

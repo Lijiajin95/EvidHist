@@ -8,7 +8,21 @@
 
 import { z } from "zod";
 
-export const failureCodes = ["version_mismatch", "invalid_range", "quote_mismatch"] as const;
+/**
+ * Stable error codes across the API: the citation domain rejects with
+ * version_mismatch / invalid_range / quote_mismatch (422), the workbench adds
+ * source_not_found / version_not_found / claim_not_found (404). Codes that the
+ * backend has not documented must surface as an invalid response, never as a
+ * silent success.
+ */
+export const failureCodes = [
+  "version_mismatch",
+  "invalid_range",
+  "quote_mismatch",
+  "source_not_found",
+  "version_not_found",
+  "claim_not_found",
+] as const;
 
 export const textVersionSchema = z.object({
   version_id: z.string().min(1).max(128),

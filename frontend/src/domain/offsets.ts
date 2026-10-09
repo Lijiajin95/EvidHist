@@ -34,6 +34,25 @@ export function utf16IndexFromCodePoint(text: string, codePointIndex: number): n
   return utf16Index;
 }
 
+/**
+ * Inverse mapping: the code-point offset that a UTF-16 index (for example a
+ * textarea selection boundary) points at. Indices that land inside a surrogate
+ * pair map to the following code point, so a range ending there still includes
+ * the whole visible character instead of splitting the pair.
+ */
+export function utf16IndexToCodePoint(text: string, utf16Index: number): number {
+  let seen = 0;
+  let utf16 = 0;
+  for (const codePoint of text) {
+    if (utf16 >= utf16Index) {
+      return seen;
+    }
+    seen += 1;
+    utf16 += codePoint.length;
+  }
+  return seen;
+}
+
 /** Split text around the half-open [start, end) code-point range of the citation. */
 export function splitByCodePointRange(text: string, start: number, end: number): HighlightSegments {
   const beforeEnd = utf16IndexFromCodePoint(text, start);

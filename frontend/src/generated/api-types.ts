@@ -38,6 +38,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Claims Endpoint */
+        get: operations["list_claims_endpoint_v1_claims_get"];
+        put?: never;
+        /**
+         * Create Claim Endpoint
+         * @description Create a claim; an exact-statement retry returns the stored claim with 200.
+         */
+        post: operations["create_claim_endpoint_v1_claims_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/claims/{claim_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Claim Endpoint */
+        get: operations["get_claim_endpoint_v1_claims__claim_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/claims/{claim_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bind Evidence Endpoint
+         * @description Validate the citation against the stored version, then bind it idempotently.
+         */
+        post: operations["bind_evidence_endpoint_v1_claims__claim_id__evidence_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/quotes/locate": {
         parameters: {
             query?: never;
@@ -47,8 +105,106 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Locate */
+        /**
+         * Locate
+         * @description Tool endpoint: validate a citation against explicitly supplied text.
+         */
         post: operations["locate_v1_quotes_locate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Sources Endpoint */
+        get: operations["list_sources_endpoint_v1_sources_get"];
+        put?: never;
+        /**
+         * Create Source Endpoint
+         * @description Create a material with its first immutable text version; retries return 200.
+         */
+        post: operations["create_source_endpoint_v1_sources_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Source Endpoint */
+        get: operations["get_source_endpoint_v1_sources__source_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sources/{source_id}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Version Endpoint
+         * @description Add a new immutable version; identical content returns the stored version (200).
+         */
+        post: operations["add_version_endpoint_v1_sources__source_id__versions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/versions/{version_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Version Endpoint */
+        get: operations["get_version_endpoint_v1_versions__version_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/versions/{version_id}/locate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Locate Version Endpoint
+         * @description Validate a citation against the persisted version text (the product flow).
+         */
+        post: operations["locate_version_endpoint_v1_versions__version_id__locate_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -70,6 +226,130 @@ export interface components {
             /** Version Id */
             version_id: string;
         };
+        /** ClaimCreateRequest */
+        ClaimCreateRequest: {
+            /** Statement */
+            statement: string;
+        };
+        /** ClaimCreatedOut */
+        ClaimCreatedOut: {
+            claim: components["schemas"]["ClaimOut"];
+            /** Created */
+            created: boolean;
+        };
+        /** ClaimDetailOut */
+        ClaimDetailOut: {
+            claim: components["schemas"]["ClaimOut"];
+            /** Evidence */
+            evidence: components["schemas"]["EvidenceOut"][];
+        };
+        /** ClaimOut */
+        ClaimOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Review Status */
+            review_status: string;
+            /** Statement */
+            statement: string;
+        };
+        /** ClaimSummaryOut */
+        ClaimSummaryOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Evidence Count */
+            evidence_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Review Status */
+            review_status: string;
+            /** Statement */
+            statement: string;
+        };
+        /** EvidenceBindRequest */
+        EvidenceBindRequest: {
+            /** End */
+            end: number;
+            /** Exact Quote */
+            exact_quote: string;
+            /** Note */
+            note: string;
+            /**
+             * Relation
+             * @enum {string}
+             */
+            relation: "supports" | "contradicts" | "mentions" | "insufficient";
+            /** Start */
+            start: number;
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+        };
+        /** EvidenceCreatedOut */
+        EvidenceCreatedOut: {
+            /** Created */
+            created: boolean;
+            evidence: components["schemas"]["EvidenceOut"];
+        };
+        /** EvidenceOut */
+        EvidenceOut: {
+            /**
+             * Claim Id
+             * Format: uuid
+             */
+            claim_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** End */
+            end: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string;
+            /** Quote */
+            quote: string;
+            /** Relation */
+            relation: string;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /** Source Origin */
+            source_origin: string;
+            /** Source Title */
+            source_title: string;
+            /** Start */
+            start: number;
+            /**
+             * Version Id
+             * Format: uuid
+             */
+            version_id: string;
+            /** Version Label */
+            version_label: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -77,17 +357,22 @@ export interface components {
         };
         /** Health */
         Health: {
-            /**
-             * Status
-             * @default ok
-             * @constant
-             */
-            status: "ok";
+            /** Status */
+            status: string;
         };
         /** LocateQuoteRequest */
         LocateQuoteRequest: {
             citation: components["schemas"]["Citation"];
             source: components["schemas"]["TextVersion"];
+        };
+        /** LocateVersionRequest */
+        LocateVersionRequest: {
+            /** End */
+            end: number;
+            /** Exact Quote */
+            exact_quote: string;
+            /** Start */
+            start: number;
         };
         /**
          * QuoteLocation
@@ -102,6 +387,88 @@ export interface components {
             start: number;
             /** Version Id */
             version_id: string;
+        };
+        /** QuoteLocationOut */
+        QuoteLocationOut: {
+            /** End */
+            end: number;
+            /** Exact Quote */
+            exact_quote: string;
+            /** Start */
+            start: number;
+            /** Version Id */
+            version_id: string;
+        };
+        /** SourceCreateRequest */
+        SourceCreateRequest: {
+            /** Initial Label */
+            initial_label: string;
+            /** Initial Text */
+            initial_text: string;
+            /** Origin */
+            origin: string;
+            /** Title */
+            title: string;
+            /** Usage Terms */
+            usage_terms: string;
+        };
+        /** SourceDetailOut */
+        SourceDetailOut: {
+            source: components["schemas"]["SourceOut"];
+            /** Versions */
+            versions: components["schemas"]["VersionOut"][];
+        };
+        /** SourceOut */
+        SourceOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Origin */
+            origin: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Usage Terms */
+            usage_terms: string;
+        };
+        /** SourceSummaryOut */
+        SourceSummaryOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Origin */
+            origin: string;
+            /** Title */
+            title: string;
+            /** Usage Terms */
+            usage_terms: string;
+            /** Version Count */
+            version_count: number;
+        };
+        /** SourceWithVersionOut */
+        SourceWithVersionOut: {
+            /** Created */
+            created: boolean;
+            source: components["schemas"]["SourceOut"];
+            version: components["schemas"]["VersionOut"];
         };
         /** TextVersion */
         TextVersion: {
@@ -122,6 +489,59 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VersionContentOut */
+        VersionContentOut: {
+            /** Content */
+            content: string;
+            /** Content Sha256 */
+            content_sha256: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+        };
+        /** VersionCreateRequest */
+        VersionCreateRequest: {
+            /** Label */
+            label: string;
+            /** Text */
+            text: string;
+        };
+        /** VersionOut */
+        VersionOut: {
+            /** Content Sha256 */
+            content_sha256: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
         };
     };
     responses: never;
@@ -172,6 +592,125 @@ export interface operations {
             };
         };
     };
+    list_claims_endpoint_v1_claims_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimSummaryOut"][];
+                };
+            };
+        };
+    };
+    create_claim_endpoint_v1_claims_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClaimCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimCreatedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_claim_endpoint_v1_claims__claim_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claim_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClaimDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bind_evidence_endpoint_v1_claims__claim_id__evidence_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                claim_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvidenceBindRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EvidenceCreatedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     locate_v1_quotes_locate_post: {
         parameters: {
             query?: never;
@@ -192,6 +731,202 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteLocation"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_sources_endpoint_v1_sources_get: {
+        parameters: {
+            query?: {
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceSummaryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_source_endpoint_v1_sources_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourceCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceWithVersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_source_endpoint_v1_sources__source_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceDetailOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_version_endpoint_v1_sources__source_id__versions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VersionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_version_endpoint_v1_versions__version_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VersionContentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    locate_version_endpoint_v1_versions__version_id__locate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                version_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LocateVersionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuoteLocationOut"];
                 };
             };
             /** @description Validation Error */

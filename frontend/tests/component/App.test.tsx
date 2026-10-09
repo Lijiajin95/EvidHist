@@ -22,7 +22,12 @@ interface FormInput {
   quote?: string;
 }
 
+async function openToolView(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: "引文定位工具" }));
+}
+
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>, input: FormInput) {
+  await openToolView(user);
   await user.type(screen.getByLabelText("文本版本编号"), input.textVersion ?? "v1");
   await user.type(screen.getByLabelText("引文版本编号"), input.citationVersion ?? "v1");
   await user.type(screen.getByLabelText("文本（本界面只校验此文本）"), input.text ?? "甲𠀀乙");
@@ -119,6 +124,7 @@ describe("quote locate screen", () => {
     const user = userEvent.setup();
     render(<App />);
 
+    await openToolView(user);
     await user.click(screen.getByRole("button", { name: "校验位置" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("请完整填写");

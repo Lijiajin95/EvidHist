@@ -4,6 +4,7 @@ import {
   isEmptyRange,
   splitByCodePointRange,
   utf16IndexFromCodePoint,
+  utf16IndexToCodePoint,
 } from "../../src/domain/offsets";
 
 describe("code point ↔ UTF-16 offset mapping", () => {
@@ -47,5 +48,28 @@ describe("code point ↔ UTF-16 offset mapping", () => {
     expect(isEmptyRange(3, 3)).toBe(true);
     expect(isEmptyRange(4, 3)).toBe(true);
     expect(isEmptyRange(0, 1)).toBe(false);
+  });
+});
+
+describe("utf16 index to code point (selection boundaries)", () => {
+  it("maps boundaries around an astral character", () => {
+    expect(utf16IndexToCodePoint("甲𠀀乙", 0)).toBe(0);
+    expect(utf16IndexToCodePoint("甲𠀀乙", 1)).toBe(1);
+    expect(utf16IndexToCodePoint("甲𠀀乙", 3)).toBe(2);
+    expect(utf16IndexToCodePoint("甲𠀀乙", 4)).toBe(3);
+  });
+
+  it("includes the whole surrogate pair when a boundary lands inside it", () => {
+    // UTF-16 index 2 is the low surrogate of 𠀀: a selection ending there
+    // still counts the visible character, so the end maps past the pair.
+    expect(utf16IndexToCodePoint("甲𠀀乙", 2)).toBe(2);
+    expect(splitByCodePointRange("甲𠀀乙", 0, 2).quote).toBe("甲𠀀");
+  });
+
+  it("maps combining marks and newline boundaries", () => {
+    expect(utf16IndexToCodePoint("a\u0301b", 1)).toBe(1);
+    expect(utf16IndexToCodePoint("a\u0301b", 2)).toBe(2);
+    expect(utf16IndexToCodePoint("甲\n乙", 1)).toBe(1);
+    expect(utf16IndexToCodePoint("甲\n乙", 2)).toBe(2);
   });
 });
