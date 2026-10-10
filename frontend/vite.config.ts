@@ -10,8 +10,10 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      "/v1": "http://127.0.0.1:8000",
-      "/health": "http://127.0.0.1:8000",
+      // E2E overrides this to its dedicated backend port so a running demo
+      // service on 8000 can never receive browser-test traffic.
+      "/v1": process.env.VITE_PROXY_TARGET ?? "http://127.0.0.1:8000",
+      "/health": process.env.VITE_PROXY_TARGET ?? "http://127.0.0.1:8000",
     },
   },
 });

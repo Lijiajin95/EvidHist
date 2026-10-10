@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
-const backendUrl = "http://127.0.0.1:8000";
+// E2E uses a dedicated backend port so a demo service on 8000 is never reused.
+const backendUrl = "http://127.0.0.1:8001";
 const frontendUrl = "http://127.0.0.1:5173";
 const ci = process.env.CI === "true";
 
@@ -18,7 +19,8 @@ const shared = {
   },
   webServer: [
     {
-      command: "../.venv/bin/uvicorn evidhist.api:app --host 127.0.0.1 --port 8000",
+      command:
+        "bash -c 'EVIDHIST_DATABASE_URL=postgresql+psycopg://evidhist:evidhist@127.0.0.1:55432/evidhist_test ../.venv/bin/python ../scripts/migrate.py && ../.venv/bin/uvicorn evidhist.api:app --host 127.0.0.1 --port 8001'",
       url: `${backendUrl}/health/live`,
       reuseExistingServer: !ci,
       timeout: 30000,
@@ -28,6 +30,7 @@ const shared = {
       url: frontendUrl,
       reuseExistingServer: !ci,
       timeout: 30000,
+      env: { VITE_PROXY_TARGET: "http://127.0.0.1:8001" },
     },
   ],
 };
