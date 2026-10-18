@@ -1,7 +1,10 @@
+import { useCallback, useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-import { App } from "../../src/App";
+import { ClaimsView } from "../../src/components/claims/ClaimsView";
+import { SourcesView } from "../../src/components/sources/SourcesView";
+import type { PendingQuote } from "../../src/domain/pendingQuote";
 import {
   bindEvidenceHandler,
   claimDetailHandler,
@@ -14,10 +17,20 @@ import {
 import { server } from "../mocks/server";
 
 /**
- * App-shell integration: navigation between the workbench views and the
- * cross-view flow of selecting a quote in a version, verifying it, and
- * binding it to a claim.
+ * 工作台视图（材料／论断）当前不作为界面入口（主界面只保留对话），但
+ * 「在版本里选中引文 → 带到论断视图绑定证据」仍是产品逻辑。这里用最小外壳
+ * 复现该接线，避免这层行为失去覆盖；外壳只存在于测试中。
  */
+function WorkbenchHarness() {
+  const [pendingQuote, setPendingQuote] = useState<PendingQuote | null>(null);
+  const consume = useCallback(() => setPendingQuote(null), []);
+  return (
+    <>
+      <SourcesView onUseQuote={setPendingQuote} />
+      <ClaimsView pendingQuote={pendingQuote} onQuoteConsumed={consume} />
+    </>
+  );
+}
 
 function useWorkbenchHandlers() {
   server.use(
@@ -37,26 +50,11 @@ function selectAstralQuote() {
   fireEvent.select(area);
 }
 
-describe("workbench shell", () => {
-  it("navigates between materials, claims and the locate tool", async () => {
-    useWorkbenchHandlers();
-    const user = userEvent.setup();
-    render(<App />);
-
-    await user.click(screen.getByRole("button", { name: "材料" }));
-    expect(await screen.findByText("史記·秦始皇本紀")).toBeVisible();
-
-    await user.click(screen.getByRole("button", { name: "论断" }));
-    expect(await screen.findByText("秦並天下在三十六年。")).toBeVisible();
-
-    await user.click(screen.getByRole("button", { name: "引文定位工具" }));
-    expect(await screen.findByText("引用定位工具")).toBeVisible();
-  });
-
+describe("workbench views（当前不作为界面入口）", () => {
   it("carries a selected quote from a version into a claim's evidence binding", async () => {
     useWorkbenchHandlers();
     const user = userEvent.setup();
-    render(<App />);
+    render(<WorkbenchHarness />);
 
     await user.click(await screen.findByText("史記·秦始皇本紀"));
     await user.click(await screen.findByText("整理稿一"));
@@ -84,7 +82,7 @@ describe("workbench shell", () => {
   it("discards a pending quote from the claims view banner", async () => {
     useWorkbenchHandlers();
     const user = userEvent.setup();
-    render(<App />);
+    render(<WorkbenchHarness />);
 
     await user.click(await screen.findByText("史記·秦始皇本紀"));
     await user.click(await screen.findByText("整理稿一"));

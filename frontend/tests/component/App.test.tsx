@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "../../src/App";
+import { ToolView } from "../../src/components/ToolView";
 import {
   delayedSuccessHandler,
   emptyResultHandler,
@@ -22,12 +24,7 @@ interface FormInput {
   quote?: string;
 }
 
-async function openToolView(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "引文定位工具" }));
-}
-
 async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>, input: FormInput) {
-  await openToolView(user);
   await user.type(screen.getByLabelText("文本版本编号"), input.textVersion ?? "v1");
   await user.type(screen.getByLabelText("引文版本编号"), input.citationVersion ?? "v1");
   await user.type(screen.getByLabelText("文本（本界面只校验此文本）"), input.text ?? "甲𠀀乙");
@@ -37,10 +34,24 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>, input: Fo
   await user.click(screen.getByRole("button", { name: "校验位置" }));
 }
 
-describe("quote locate screen", () => {
+describe("app shell", () => {
+  it("exposes the chat as the only interaction surface", async () => {
+    server.use(http.get("/v1/conversations", () => HttpResponse.json([])));
+    render(<App />);
+
+    expect(await screen.findByText("你好，让我们开始聊天吧")).toBeInTheDocument();
+    expect(screen.getByLabelText("输入消息")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "开启新对话" })).toBeInTheDocument();
+    for (const hidden of ["材料", "论断", "引文定位工具"]) {
+      expect(screen.queryByRole("button", { name: hidden })).toBeNull();
+    }
+  });
+});
+
+describe("quote locate tool（工作台视图，当前不作为界面入口）", () => {
   it("shows the located range and highlights the astral quote in the source text", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, { text: "甲𠀀乙", start: "1", end: "2", quote: "𠀀" });
 
@@ -53,7 +64,7 @@ describe("quote locate screen", () => {
   it("renders a readable error for a version mismatch instead of raw JSON", async () => {
     server.use(versionMismatchHandler);
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, { citationVersion: "v2" });
 
@@ -63,7 +74,7 @@ describe("quote locate screen", () => {
   it("shows the loading state while the check is in flight", async () => {
     server.use(delayedSuccessHandler(2000));
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, {});
 
@@ -73,7 +84,7 @@ describe("quote locate screen", () => {
   it("reports a response that violates the contract as an invalid response", async () => {
     server.use(invalidResponseHandler);
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, {});
 
@@ -83,7 +94,7 @@ describe("quote locate screen", () => {
   it("reports an empty result instead of showing an empty success", async () => {
     server.use(emptyResultHandler);
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, {});
 
@@ -93,7 +104,7 @@ describe("quote locate screen", () => {
   it("reports a network failure when the service cannot be reached", async () => {
     server.use(networkFailureHandler);
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, {});
 
@@ -103,7 +114,7 @@ describe("quote locate screen", () => {
   it("treats an undocumented failure code as a contract violation", async () => {
     server.use(unknownCodeHandler);
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, {});
 
@@ -113,7 +124,7 @@ describe("quote locate screen", () => {
   it("reports a non-JSON error body as an invalid response", async () => {
     server.use(nonJsonErrorHandler);
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, {});
 
@@ -122,9 +133,8 @@ describe("quote locate screen", () => {
 
   it("blocks submission of an incomplete form with a readable alert", async () => {
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
-    await openToolView(user);
     await user.click(screen.getByRole("button", { name: "校验位置" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("请完整填写");
@@ -134,7 +144,7 @@ describe("quote locate screen", () => {
   it("canceling returns to idle and a late response cannot flip the state", async () => {
     server.use(delayedSuccessHandler(500));
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, {});
     await user.click(await screen.findByRole("button", { name: "取消" }));
@@ -148,7 +158,7 @@ describe("quote locate screen", () => {
   it("prevents a second submission while a request is in flight", async () => {
     server.use(delayedSuccessHandler(600));
     const user = userEvent.setup();
-    render(<App />);
+    render(<ToolView />);
 
     await fillAndSubmit(user, { start: "1", end: "2" });
     await screen.findByText("正在校验…");

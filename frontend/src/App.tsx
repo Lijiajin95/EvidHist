@@ -1,40 +1,14 @@
-import { useCallback, useState } from "react";
-import { Nav, type View } from "./components/Nav";
-import { ToolView } from "./components/ToolView";
-import type { PendingQuote } from "./domain/pendingQuote";
-import { SourcesView } from "./components/sources/SourcesView";
-import { ClaimsView } from "./components/claims/ClaimsView";
+import { ChatView } from "./components/chat/ChatView";
 
 /**
- * EvidHist v0.1 史料与引用工作台: materials, claims and the explicit-text
- * locate tool in one shell. Evidence bindings always point at persisted
- * versions; the interface never presents a position match as proof that a
- * historical statement has been verified.
+ * EvidHist 对话：当前版本只暴露对话主界面（史料工作台视图暂不显示入口），
+ * 材料与论断仍由对话内的工具读写，界面不直接呈现。
  */
 export function App() {
-  const [view, setView] = useState<View>("sources");
-  const [pendingQuote, setPendingQuote] = useState<PendingQuote | null>(null);
-
-  const handleUseQuote = useCallback((quote: PendingQuote) => {
-    setPendingQuote(quote);
-    setView("claims");
-  }, []);
-
-  const handleQuoteConsumed = useCallback(() => {
-    setPendingQuote(null);
-  }, []);
-
   return (
     <main className="app">
-      <h1>EvidHist 史料与引用工作台</h1>
-      <Nav view={view} onChange={setView} />
-      {view === "sources" ? (
-        <SourcesView onUseQuote={handleUseQuote} />
-      ) : view === "claims" ? (
-        <ClaimsView pendingQuote={pendingQuote} onQuoteConsumed={handleQuoteConsumed} />
-      ) : (
-        <ToolView />
-      )}
+      <h1 className="visually-hidden">EvidHist 对话</h1>
+      <ChatView />
     </main>
   );
 }

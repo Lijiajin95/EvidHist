@@ -23,6 +23,12 @@ async function fillForm(page: Page, overrides: Partial<Record<string, string>> =
   await page.getByLabel("引文", { exact: true }).fill(values.quote);
 }
 
+// 材料／论断／引文定位工具视图当前不作为界面入口（主界面只保留对话），
+// 浏览器级流程暂时停用；视图恢复入口后删除这段 beforeEach 即可重新启用。
+test.beforeEach(() => {
+  test.skip(true, "工作台视图当前隐藏，仅对话作为主界面");
+});
+
 test("locates a supplementary-plane quote end to end and highlights it", async ({ page }) => {
   await openTool(page);
   await fillForm(page);

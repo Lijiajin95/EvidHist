@@ -24,6 +24,12 @@ async function selectUtf16Range(page: Page, start: number, end: number): Promise
   );
 }
 
+// 材料／论断／引文定位工具视图当前不作为界面入口（主界面只保留对话），
+// 浏览器级流程暂时停用；视图恢复入口后删除这段 beforeEach 即可重新启用。
+test.beforeEach(() => {
+  test.skip(true, "工作台视图当前隐藏，仅对话作为主界面");
+});
+
 test("材料录入、版本保存、引文校验、论断绑定、多证据与刷新回查", async ({ page }) => {
   const tag = marker();
   const title = `史記·秦始皇本紀（E2E ${tag}）`;
