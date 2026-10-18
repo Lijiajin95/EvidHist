@@ -19,8 +19,9 @@ const shared = {
   },
   webServer: [
     {
+      // 对话用例需要确定性的模型输出：PI 指向仓库内的假 PI 脚本，不调用真实模型。
       command:
-        "bash -c 'EVIDHIST_DATABASE_URL=postgresql+psycopg://evidhist:evidhist@127.0.0.1:55432/evidhist_test ../.venv/bin/python ../scripts/migrate.py && ../.venv/bin/uvicorn evidhist.api:app --host 127.0.0.1 --port 8001'",
+        "bash -c 'EVIDHIST_DATABASE_URL=postgresql+psycopg://evidhist:evidhist@127.0.0.1:55432/evidhist_test FAKE_PI_MODE=ok EVIDHIST_PI_COMMAND=$PWD/../tests/fixtures/fake_pi.py EVIDHIST_PI_HOME=$PWD/../.cache/pi-home EVIDHIST_PI_WORKDIR=$PWD/../.cache EVIDHIST_CHAT_REVIEW=1 ../.venv/bin/python ../scripts/migrate.py && EVIDHIST_DATABASE_URL=postgresql+psycopg://evidhist:evidhist@127.0.0.1:55432/evidhist_test FAKE_PI_MODE=ok EVIDHIST_PI_COMMAND=$PWD/../tests/fixtures/fake_pi.py EVIDHIST_PI_HOME=$PWD/../.cache/pi-home EVIDHIST_PI_WORKDIR=$PWD/../.cache EVIDHIST_CHAT_REVIEW=1 ../.venv/bin/uvicorn evidhist.api:app --host 127.0.0.1 --port 8001'",
       url: `${backendUrl}/health/live`,
       reuseExistingServer: !ci,
       timeout: 30000,
