@@ -187,3 +187,49 @@ make frontend-audit     # npm audit（--audit-level=high，审计端点固定官
 | 干净重装 | `uv sync --frozen`（含 mutation/security 组）与 `npm ci` 均按锁文件复装成功 |
 
 本记录未覆盖：远程 CI 执行（仓库未发布）、`uv sync` 于全新机器的端到端安装（仅本机复装验证）、真实模型质量（未接入模型，fixture 只验证评分链路）、`diff-cover`（无 Git 基线，按策略标记不适用并在出现基线时强制接入）、actionlint（按交接清单时机“发布 CI 前”顺延）、oasdiff/Gitleaks（按既定接入时机顺延）。无障碍人工核查（键盘全流程/屏幕阅读器实测）经用户 2026-10-09 明确：当前暂无无障碍需求，顺延至明确指示后再做；已实现的 axe 自动检查与键盘可达性 E2E 用例继续保留运行。仓库本轮未创建 commit（用户未要求）。
+
+## 首版研究闭环：材料导入与运行入口（2026-10-18）
+
+对应[首版最小技术方案](minimal-technical-plan-2026-10-18.md)与[试点材料清单](research/ming-pilot-materials-2026-10-18.md)。实现文件在 `src/evidhist/research/`，产物与运行记录不进版本库（`runs/` 已 gitignore）。
+
+### 环境前提（本机实测）
+
+- 工具链：Linux 版 uv 0.12.24 与 CPython 3.14.8 装在 `.toolchain/`（原 macOS 二进制保留为 `uv-0.12.24-macos-arm64`）；`uv sync --frozen` 重建 `.venv`。
+- 数据库：本机 `sudo` 不可用，**未用 `make db-up`（docker）**；改为 conda-forge 的 PostgreSQL 18.6 + pgvector 0.8.6（`.toolchain/postgres`），数据目录 `.cache/pgdata`（测试库 55432）与 `.cache/pgdata-demo`（演示库 55433），以受管后台任务运行：
+  `.toolchain/postgres/bin/postgres -D .cache/pgdata -p 55432 -k .cache/pgsock -c listen_addresses=127.0.0.1`
+- 迁移：`make migrate`（测试库）与 `make demo-migrate`（演示库）。
+
+### 用法
+
+```bash
+# 1) 导入试点 25 卷（幂等；原文散列必须与采集台账一致）
+make import-ming                       # 或 scripts/import_ming_pilot.py --database-url …
+# 2) 跑一次研究闭环（fake 执行器可离线验证全链路）
+QUESTION='于謙在北京保衛戰中的作用是什麼?' EXECUTOR=pi REVIEWER=pi make research-run
+# 3) 查看产物
+ls runs/<run_id>/                       # report.md citations.json run.json review.json [pi_outputs.json]
+```
+
+### Pi／模型接入（参考 ForgeLoop 配置）
+
+- 模型来自 `~/.pi/agent/models.json`（provider `cc-switch-open-code-go`、模型 `deepseek-v4.1-flash`）；PI 需要可写 HOME，故用 `.cache/pi-home` 作隔离 HOME（内含 `~/.pi` 配置副本）。
+- **PI 本体零工具**：以 `--no-tools --no-mcp --no-extensions --no-skills --no-context-files --thinking minimal` 启动；材料访问全部由适配器代理 4 个只读工具（`list_materials/search/read/exact_quote`），工具调用计入运行预算。
+- 三次调用：检索计划 → 论断与逐字引文 → 反证归纳；评审再单独调用一次（只看报告）。
+
+### 试点运行记录（2026-10-18 实际执行）
+
+| 运行 | 结果 |
+| --- | --- |
+| `pilot-20261018c` | 3 条论断通过程序校验；评审 **fail**——引文只有「于謙」「京師」等检索词，支撑不了论断（真实缺陷） |
+| `pilot-20261018g` | 模型拒答（检索片段相关性不足），0 条论断；评审 insufficient |
+| `pilot-20261018h` | 3 条论断通过程序校验、4 条证据落库；评审 **pass**（评语仍提示标题分层与状态措辞） |
+| `pilot-final` | 3 条论断通过程序校验、3 条证据落库；评审 **fail**——引文支撑不了「上疏辯駁羅通」等表述（越界） |
+
+`pilot-final` 用量：3 次研究调用 + 1 次评审，input 9,044 / output 13,910 tokens，工具调用 58/60。评审通过与否取决于模型采样与证据质量，**评审是验收输入之一，不代替用户复核**。
+
+### 已知限制（未做）
+
+- 论断越界仍会发生：程序校验只证明文字位置，防止越界依赖评审与用户复核；尚未加"论断必须复述引文"的硬约束。
+- 反证仅记录检索词与命中数，未逐条列出反证内容（评审已两次指出）。
+- 检索为纯子串匹配（无分词/排序服务），片段相关性靠"覆盖检索词数"排序。
+- 未做跨来源互校、OCR 校对与材料入库外的自动化；失败后人工重跑（B05）。
