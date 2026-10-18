@@ -7,6 +7,10 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Playwright probes the dev server at 127.0.0.1; Node resolves "localhost"
+    // to ::1 first on IPv6-preferring hosts, which would leave that probe (and
+    // therefore the E2E job) waiting on a closed port.
+    host: "127.0.0.1",
     port: 5173,
     strictPort: true,
     proxy: {

@@ -2,6 +2,7 @@ import { useId, useState, type ChangeEvent } from "react";
 import { createSource } from "../../api/workbench";
 import { sourceCreateSchema } from "../../domain/workbenchContract";
 import { FormFeedback, type FormFeedback as Feedback } from "../Feedback";
+import { readUtf8Text, type ImportOutcome } from "./importText";
 import { workbenchFailureMessage } from "../messages";
 
 const EMPTY_VALUES = {
@@ -27,18 +28,8 @@ export function SourceForm({ onSaved }: { onSaved: () => void }) {
   };
 
   const importText = (file: File | undefined): void => {
-    if (file === undefined) {
-      return;
-    }
-    file
-      .text()
-      .then((text) => {
-        if (text.includes("\uFFFD")) {
-          setFeedback({ kind: "error", text: "文件不是有效的 UTF-8 文本，请转换编码后重试。" });
-          return;
-        }
-        setValues((previous) => ({ ...previous, initial_text: text }));
-      })
+    readUtf8Text(file)
+      .then((outcome) => applyImport(outcome, setValues, setFeedback))
       .catch(() => setFeedback({ kind: "error", text: "无法读取所选文件。" }));
   };
 
@@ -75,6 +66,21 @@ export function SourceForm({ onSaved }: { onSaved: () => void }) {
       </button>
     </form>
   );
+}
+
+type SetValues = (update: (previous: Values) => Values) => void;
+
+/** Apply a read outcome to the form; an ignored selection changes nothing. */
+function applyImport(
+  outcome: ImportOutcome,
+  setValues: SetValues,
+  setFeedback: (feedback: Feedback) => void,
+): void {
+  if (outcome.kind === "loaded") {
+    setValues((previous) => ({ ...previous, initial_text: outcome.text }));
+  } else if (outcome.kind === "error") {
+    setFeedback({ kind: "error", text: outcome.message });
+  }
 }
 
 interface SourceFormFieldsProps {

@@ -70,6 +70,31 @@ describe("source form", () => {
 
     await waitFor(() => expect(screen.getByLabelText("初始文本")).toHaveValue("帝曰：善。"));
   });
+
+  it("rejects text that is not UTF-8 instead of storing it", async () => {
+    const user = userEvent.setup();
+    render(<SourceForm onSaved={() => undefined} />);
+    const file = new File(["帝曰\ufffd善。"], "broken.txt", { type: "text/plain" });
+
+    await user.upload(screen.getByLabelText("导入 .txt 文件（UTF-8）"), file);
+
+    expect(await screen.findByTestId("source-feedback")).toHaveTextContent(
+      "文件不是有效的 UTF-8 文本",
+    );
+    expect(screen.getByLabelText("初始文本")).toHaveValue("");
+  });
+
+  it("reports an unreadable file without touching the initial text", async () => {
+    const user = userEvent.setup();
+    render(<SourceForm onSaved={() => undefined} />);
+    const file = new File(["x"], "unreadable.txt", { type: "text/plain" });
+    vi.spyOn(file, "text").mockRejectedValue(new Error("boom"));
+
+    await user.upload(screen.getByLabelText("导入 .txt 文件（UTF-8）"), file);
+
+    expect(await screen.findByTestId("source-feedback")).toHaveTextContent("无法读取所选文件。");
+    expect(screen.getByLabelText("初始文本")).toHaveValue("");
+  });
 });
 
 describe("source list", () => {
