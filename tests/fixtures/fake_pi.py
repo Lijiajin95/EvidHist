@@ -47,6 +47,13 @@ def _payload_with(message: str, key: str) -> dict | None:
 def _reply(mode: str, message: str) -> str:
     if mode == "garbage":
         return "我不会输出 JSON。"
+    if "verdict" in message:
+        review = {
+            "verdict": "pass",
+            "checked_scope": "报告全文与引文位置",
+            "comments": [{"target": "§2", "severity": "info", "comment": "引文与论断一致。"}],
+        }
+        return json.dumps(review, ensure_ascii=False)
     if "counter_queries" in message:
         return json.dumps({"queries": ["于謙"], "counter_queries": ["也先"]}, ensure_ascii=False)
     if "findings" in message:

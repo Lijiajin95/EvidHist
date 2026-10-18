@@ -39,6 +39,7 @@ dev = [
   "import-linter>=2.15,<3",
   "deptry>=0.25,<1",
   "certifi>=2026.7.22,<2027",
+  "diff-cover>=9,<10",
 ]
 mutation = ["mutmut>=3.8,<4"]
 security = [

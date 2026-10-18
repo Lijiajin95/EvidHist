@@ -3,10 +3,13 @@
 coverage.py's ``percent_covered`` total mixes statements and branches once branch
 coverage is enabled; the policy in ``config/quality-policy.toml`` requires line and
 branch coverage to each reach their own minimum, computed from the raw counters in
-``coverage json`` output. A missing or malformed report is a failed check. Without a
-Git baseline the changed-line gate is explicitly "not applicable"; once a baseline
-exists this script fails until diff-cover is integrated, so the gate cannot silently
-pass by omission.
+``coverage json`` output. A missing or malformed report is a failed check.
+
+Changed-line coverage uses diff-cover against the Git baseline (``origin/main``, or
+``HEAD~1`` when the baseline equals HEAD, as happens on a push to main), comparing
+against ``reports/coverage.xml``. A diff-cover run that produces no report is a failed
+check; a diff with no measurable lines (tests or docs only) is explicitly "not
+applicable" rather than a silent pass.
 """
 
 import argparse
@@ -49,9 +52,9 @@ def branch_coverage(totals: dict) -> float | None:
     return totals["covered_branches"] / totals["num_branches"] * 100
 
 
-def git_base_revision(root: Path, base: str = "origin/main") -> str | None:
+def _rev_parse(root: Path, revision: str) -> str | None:
     result = subprocess.run(
-        ["git", "rev-parse", "--verify", "--end-of-options", f"{base}^{{commit}}"],
+        ["git", "rev-parse", "--verify", "--end-of-options", f"{revision}^{{commit}}"],
         cwd=root,
         capture_output=True,
         text=True,
@@ -61,7 +64,45 @@ def git_base_revision(root: Path, base: str = "origin/main") -> str | None:
     return revision if re.fullmatch(r"[a-f0-9]{40}|[a-f0-9]{64}", revision) else None
 
 
-def changed_line_gate(root: Path, minimum: float) -> dict:
+def git_base_revision(root: Path, base: str = "origin/main") -> str | None:
+    """基线 revision；origin/main 与 HEAD 相同时回退到 HEAD~1，避免门槛空转。"""
+    revision = _rev_parse(root, base)
+    if revision is None:
+        return None
+    if revision == _rev_parse(root, "HEAD"):
+        return _rev_parse(root, "HEAD~1")
+    return revision
+
+
+def run_diff_cover(root: Path, base: str, coverage_xml: Path) -> dict | None:
+    """用 diff-cover 比较 coverage.xml 与基线，返回 JSON 报告；无法产出时报 None。"""
+    report = root / "reports" / "diff-cover.json"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        [
+            str(root / ".venv" / "bin" / "diff-cover"),
+            str(coverage_xml),
+            "--compare-branch",
+            base,
+            "--json-report",
+            str(report),
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0 and not report.exists():
+        return None
+    try:
+        payload = json.loads(report.read_text(encoding="utf-8"))
+    except OSError, ValueError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def changed_line_gate(root: Path, minimum: float, coverage_xml: Path) -> dict:
+    """改动行覆盖：无基线不适用；有基线必须给出可核对的结果。"""
     base = git_base_revision(root)
     if base is None:
         return {
@@ -69,15 +110,32 @@ def changed_line_gate(root: Path, minimum: float) -> dict:
             "minimum": minimum,
             "reason": "no Git baseline; changed-line coverage cannot be measured yet",
         }
-    return {
-        "status": "pending_integration",
-        "minimum": minimum,
-        "base": base,
-        "reason": "diff-cover must be integrated now that a Git baseline exists",
-    }
+    report = run_diff_cover(root, base, coverage_xml)
+    if report is None:
+        return {
+            "status": "failed",
+            "minimum": minimum,
+            "base": base,
+            "reason": "diff-cover produced no report; changed-line coverage is unverified",
+        }
+    total, percent = report.get("total_num_lines"), report.get("total_percent_covered")
+    if not isinstance(total, int) or total == 0 or not isinstance(percent, int | float):
+        return {
+            "status": "not_applicable",
+            "minimum": minimum,
+            "base": base,
+            "reason": "the diff has no measurable lines (tests or docs only)",
+        }
+    measured = float(percent)
+    result = {"status": "measured", "minimum": minimum, "base": base, "percent": measured}
+    if measured < minimum:
+        result["reason"] = f"changed-line coverage {measured:.1f}% is below {minimum}%"
+    return result
 
 
-def run_thresholds(report_path: Path, coverage_policy: dict, root: Path) -> dict:
+def run_thresholds(
+    report_path: Path, coverage_policy: dict, root: Path, coverage_xml: Path | None = None
+) -> dict:
     failures: list[str] = []
     try:
         totals = read_totals(report_path)
@@ -101,8 +159,10 @@ def run_thresholds(report_path: Path, coverage_policy: dict, root: Path) -> dict
     except ValueError as error:
         failures.append(str(error))
         line_percent, branch = None, {"percent": None, "status": "missing", "minimum": None}
-    changed = changed_line_gate(root, coverage_policy["changed_line_min"])
-    if changed["status"] == "pending_integration":
+    changed = changed_line_gate(
+        root, coverage_policy["changed_line_min"], coverage_xml or report_path.with_suffix(".xml")
+    )
+    if "reason" in changed and changed["status"] in {"failed", "measured"}:
         failures.append("changed-line coverage: " + changed["reason"])
     return {
         "report": str(report_path),
@@ -123,7 +183,10 @@ def main() -> int:
     )
     args = parser.parse_args()
     result = run_thresholds(
-        args.report.resolve(), load_policy(args.config.resolve()), args.root.resolve()
+        args.report.resolve(),
+        load_policy(args.config.resolve()),
+        args.root.resolve(),
+        args.report.resolve().with_suffix(".xml"),
     )
     args.json_output.parent.mkdir(parents=True, exist_ok=True)
     args.json_output.write_text(
@@ -135,7 +198,8 @@ def main() -> int:
     print(
         f"Coverage thresholds: {status} "
         f"(line {result['line']['percent']}, branch {result['branch']['percent']}, "
-        f"changed-lines {result['changed_lines']['status']})."
+        f"changed-lines {result['changed_lines']['status']}"
+        f"{' ' + format(result['changed_lines']['percent'], '.1f') + '%' if 'percent' in result['changed_lines'] else ''})."
     )
     return 0 if result["summary"]["passed"] else 1
 

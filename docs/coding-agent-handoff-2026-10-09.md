@@ -397,7 +397,7 @@ PR 使用可复现运行，扩展检查使用变化 seed 并记录复现参数�
 | --- | --- | --- | --- |
 | Import Linter | Python 越层、领域耦合适配器 | 领域到 API/数据库的禁止依赖 0 | 先保护现有真实边界 |
 | deptry | 未声明、传递依赖误用、依赖分组错误 | DEP001/003/004 未处置项 0；DEP002 逐包审阅 | Python 基础门槛修复后 |
-| diff-cover | 新改代码被整体覆盖率掩盖 | 可测量新增行 ≥90% | 首次具备 Git base 后 |
+| diff-cover | 新改代码被整体覆盖率掩盖 | 可测量新增行 ≥90% | **2026-10-18 已接入**：`scripts/check_coverage_thresholds.py` 调用 diff-cover，基线取 `origin/main`（等于 HEAD 时回退 `HEAD~1`） |
 | pytest-timeout | 死锁、无限等待、卡住的 fixture | 初始每测试 30 秒，单项系统例外 60 秒 | 验证 3.14 与信号兼容后 |
 | actionlint | GitHub workflow 语法、表达式、运行命令错误 | 未处置错误 0 | 发布 CI 前 |
 | oasdiff | OpenAPI 破坏性变化 | 未批准兼容破坏 0 | 已有稳定 API 基线后 |

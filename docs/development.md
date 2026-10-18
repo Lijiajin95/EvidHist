@@ -36,7 +36,7 @@ make db-down
 
 数据库测试缺少 DSN 或目标不是测试数据库时直接失败。可通过 `TEST_DATABASE_URL` 为 Make 目标显式配置测试连接；修改容器端口时同步设置 `EVIDHIST_TEST_PORT` 和连接 URL。示例账号只用于本地隔离测试。
 
-覆盖门槛为 `src/evidhist` 的行/分支综合覆盖 90%，并由 `scripts/check_coverage_thresholds.py` 按 `coverage json` 原始计数分别核对独立行覆盖与分支覆盖（2026-10-09 夜间实测均为 100%）。无 Git 基线时增量覆盖按策略标记“不适用”，出现基线后该脚本会显式失败直到接入 diff-cover。真实 HTTP 系统测试启动临时独立进程并在测试后关闭；API 组件测试使用受控数据库边界替身，两种结果分别报告。
+覆盖门槛为 `src/evidhist` 的行/分支综合覆盖 90%，并由 `scripts/check_coverage_thresholds.py` 按 `coverage json` 原始计数分别核对独立行覆盖与分支覆盖（2026-10-09 夜间实测均为 100%）。无 Git 基线或改动中没有可测行（仅测试/文档）时，增量覆盖按策略标记“不适用”；有基线时由 diff-cover 测量改动行覆盖。真实 HTTP 系统测试启动临时独立进程并在测试后关闭；API 组件测试使用受控数据库边界替身，两种结果分别报告。
 
 ## 变异与安全检查
 
@@ -186,7 +186,7 @@ make frontend-audit     # npm audit（--audit-level=high，审计端点固定官
 | API 契约漂移 | 受控漂移负例：隔离目录中改动快照 → `--check` 退出 1；缺失快照 → 退出 1；当前快照 → 退出 0 |
 | 干净重装 | `uv sync --frozen`（含 mutation/security 组）与 `npm ci` 均按锁文件复装成功 |
 
-本记录未覆盖：远程 CI 执行（仓库未发布）、`uv sync` 于全新机器的端到端安装（仅本机复装验证）、真实模型质量（未接入模型，fixture 只验证评分链路）、`diff-cover`（无 Git 基线，按策略标记不适用并在出现基线时强制接入）、actionlint（按交接清单时机“发布 CI 前”顺延）、oasdiff/Gitleaks（按既定接入时机顺延）。无障碍人工核查（键盘全流程/屏幕阅读器实测）经用户 2026-10-09 明确：当前暂无无障碍需求，顺延至明确指示后再做；已实现的 axe 自动检查与键盘可达性 E2E 用例继续保留运行。仓库本轮未创建 commit（用户未要求）。
+本记录未覆盖：远程 CI 执行（仓库未发布）、`uv sync` 于全新机器的端到端安装（仅本机复装验证）、真实模型质量（未接入模型，fixture 只验证评分链路）、~~`diff-cover`~~（2026-10-18 已接入：见下节）、actionlint（按交接清单时机“发布 CI 前”顺延）、oasdiff/Gitleaks（按既定接入时机顺延）。无障碍人工核查（键盘全流程/屏幕阅读器实测）经用户 2026-10-09 明确：当前暂无无障碍需求，顺延至明确指示后再做；已实现的 axe 自动检查与键盘可达性 E2E 用例继续保留运行。仓库本轮未创建 commit（用户未要求）。
 
 ## 首版研究闭环：材料导入与运行入口（2026-10-18）
 
@@ -251,3 +251,15 @@ CI 侧同时修复：
 - `frontend-quality` 与 `quality` 作业卡在既有的 ESLint `max-lines-per-function`：`SourceForm.tsx` 的 `SourceForm` 有 56 行。把 `.txt` 读取逻辑抽到 `frontend/src/components/sources/importText.ts`（含 4 条单元测试），组件降到 50 行；同时补了非 UTF-8 与读取失败两条组件测试。
 
 本地验证：`make check` 退出码 0（174 项）；`make security` 退出码 0（pip-audit 无已知漏洞、bandit 0 命中）；`make frontend-check` 退出码 0（101 项测试，覆盖率 97% 行 / 91% 分支）。
+
+### 覆盖与增量门槛（2026-10-18 补齐）
+
+CI 质量作业还暴露两处与本轮改动相关的问题，已一并处理：
+
+| 问题 | 处理 |
+| --- | --- |
+| 集成测试依赖 `crawler/data-ming/`（不随代码发布，CI 无此目录） | 语料改为可生成：`scripts/import_ming_pilot.py` 新增 `--data-dir`，集成测试在本地用真实 25 卷、在无该目录时按同样结构生成 25 卷合成语料（同样的 sha256 登记、许可与卷次），断言不变；`EVIDHIST_MING_CORPUS=synthetic` 可强制走合成分支 |
+| Git 基线出现后增量覆盖门槛卡在 `pending_integration` | 按交接清单接入 `diff-cover`（dev 组）：`scripts/check_coverage_thresholds.py` 用 `reports/coverage.xml` 对基线比较，测量不到可测行（仅测试/文档改动）标“不适用”，diff-cover 未产出报告则判失败；基线等于 HEAD 时（直推 main）回退到 `HEAD~1`，避免门槛空转 |
+| 分支覆盖 82% 低于 90% | 补 `review.py` 契约测试（14 例：判定、字段、缺评、超时、协议错误）与检索/解析不变量测试（20 例：检索词拆分、片段窗口与归并、论断与引文窄化、RPC 容错解析），分支覆盖升至 94% |
+
+实测：`make coverage` 退出码 0（行 98.9%、分支 93.8%、改动行 100%）；`make check` 219 项通过。

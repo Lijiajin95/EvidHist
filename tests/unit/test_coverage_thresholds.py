@@ -147,15 +147,115 @@ def test_changed_line_coverage_is_not_applicable_without_a_git_baseline(
     assert result["summary"]["passed"] is True
 
 
-def test_an_existing_git_baseline_requires_diff_cover_integration(
+def diff_report(total_lines: int, percent: float | None) -> dict:
+    return {
+        "total_num_lines": total_lines,
+        "total_percent_covered": percent,
+        "num_changed_lines": total_lines,
+    }
+
+
+def test_changed_lines_are_measured_against_the_git_baseline(
     gates: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     report = write_coverage(tmp_path, totals(90, 90))
     config = write_config(tmp_path)
     monkeypatch.setattr(gates, "git_base_revision", lambda root: "b" * 40)
+    monkeypatch.setattr(gates, "run_diff_cover", lambda *args, **kwargs: diff_report(20, 95.0))
 
     result = gates.run_thresholds(report, gates.load_policy(config), tmp_path)
 
-    assert result["changed_lines"]["status"] == "pending_integration"
+    assert result["changed_lines"]["status"] == "measured"
+    assert result["changed_lines"]["percent"] == 95.0
+    assert result["changed_lines"]["base"] == "b" * 40
+    assert result["summary"]["passed"] is True
+
+
+def test_changed_lines_below_the_minimum_fail_the_check(
+    gates: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = write_coverage(tmp_path, totals(95, 95))
+    config = write_config(tmp_path)
+    monkeypatch.setattr(gates, "git_base_revision", lambda root: "c" * 40)
+    monkeypatch.setattr(gates, "run_diff_cover", lambda *args, **kwargs: diff_report(20, 40.0))
+
+    result = gates.run_thresholds(report, gates.load_policy(config), tmp_path)
+
+    assert result["changed_lines"]["status"] == "measured"
+    assert result["summary"]["passed"] is False
+    assert any("changed-line" in failure for failure in result["summary"]["failures"])
+
+
+def test_a_diff_without_measurable_lines_is_not_applicable(
+    gates: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = write_coverage(tmp_path, totals(95, 95))
+    config = write_config(tmp_path)
+    monkeypatch.setattr(gates, "git_base_revision", lambda root: "d" * 40)
+    monkeypatch.setattr(gates, "run_diff_cover", lambda *args, **kwargs: diff_report(0, None))
+
+    result = gates.run_thresholds(report, gates.load_policy(config), tmp_path)
+
+    assert result["changed_lines"]["status"] == "not_applicable"
+    assert result["summary"]["passed"] is True
+
+
+def test_a_missing_diff_cover_report_fails_the_check(
+    gates: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    report = write_coverage(tmp_path, totals(95, 95))
+    config = write_config(tmp_path)
+    monkeypatch.setattr(gates, "git_base_revision", lambda root: "e" * 40)
+    monkeypatch.setattr(gates, "run_diff_cover", lambda *args, **kwargs: None)
+
+    result = gates.run_thresholds(report, gates.load_policy(config), tmp_path)
+
     assert result["summary"]["passed"] is False
     assert any("diff-cover" in failure for failure in result["summary"]["failures"])
+
+
+def test_diff_cover_compares_the_coverage_xml_with_the_baseline(
+    gates: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """真实调用路径：命令行参数必须指向 coverage.xml 与基线 revision。"""
+    captured: dict = {}
+
+    def fake_run(command: list[str], **kwargs: object) -> object:
+        captured["command"] = command
+        report = Path(command[command.index("--json-report") + 1])
+        report.write_text(json.dumps(diff_report(5, 80.0)), encoding="utf-8")
+
+        class Done:
+            returncode = 0
+
+        return Done()
+
+    monkeypatch.setattr(gates.subprocess, "run", fake_run)
+    xml = tmp_path / "coverage.xml"
+    xml.write_text("<coverage/>", encoding="utf-8")
+
+    result = gates.run_diff_cover(tmp_path, "f" * 40, xml)
+
+    assert result == diff_report(5, 80.0)
+    assert "--compare-branch" in captured["command"]
+    assert "f" * 40 in captured["command"]
+    assert str(xml) in captured["command"]
+
+
+def test_a_baseline_equal_to_head_falls_back_to_the_previous_commit(
+    gates: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """直推 main 时 origin/main 就是 HEAD；门槛必须仍测量最近一次改动。"""
+    revisions = {"origin/main": "a" * 40, "HEAD": "a" * 40, "HEAD~1": "b" * 40}
+    monkeypatch.setattr(gates, "_rev_parse", lambda root, revision: revisions.get(revision))
+
+    assert gates.git_base_revision(tmp_path) == "b" * 40
+
+
+def test_a_baseline_that_differs_from_head_is_used_directly(
+    gates: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    revisions = {"origin/main": "a" * 40, "HEAD": "c" * 40}
+    monkeypatch.setattr(gates, "_rev_parse", lambda root, revision: revisions.get(revision))
+
+    assert gates.git_base_revision(tmp_path) == "a" * 40
