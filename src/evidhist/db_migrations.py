@@ -14,17 +14,20 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 MIGRATIONS_ROOT = Path(__file__).resolve().parents[2] / "migrations"
 MIGRATIONS_TABLE = "schema_migrations"
 
+# 表名是模块常量，不是外部输入；SQL 值一律走绑定参数。bandit 的表名拼接告警在此豁免。
+_CREATE_TABLE = (
+    f"CREATE TABLE IF NOT EXISTS {MIGRATIONS_TABLE} ("
+    "name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"
+)
+_SELECT_APPLIED = f"SELECT name FROM {MIGRATIONS_TABLE}"  # nosec B608: 常量表名
+_INSERT_APPLIED = f"INSERT INTO {MIGRATIONS_TABLE} (name) VALUES (:name)"  # nosec B608
+
 
 async def applied_migrations(engine: AsyncEngine) -> set[str]:
     """Return already-applied migration file names, creating the bookkeeping table."""
     async with engine.begin() as connection:
-        await connection.execute(
-            text(
-                f"CREATE TABLE IF NOT EXISTS {MIGRATIONS_TABLE} ("
-                "name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"
-            )
-        )
-        rows = await connection.execute(text(f"SELECT name FROM {MIGRATIONS_TABLE}"))
+        await connection.execute(text(_CREATE_TABLE))
+        rows = await connection.execute(text(_SELECT_APPLIED))
         return {row[0] for row in rows}
 
 
@@ -45,7 +48,7 @@ async def apply_migrations(engine: AsyncEngine, root: Path = MIGRATIONS_ROOT) ->
         async with engine.begin() as connection:
             await connection.execute(statement)
             await connection.execute(
-                text(f"INSERT INTO {MIGRATIONS_TABLE} (name) VALUES (:name)"),
+                text(_INSERT_APPLIED),
                 {"name": path.name},
             )
         executed.append(path.name)

@@ -41,7 +41,14 @@ dev = [
   "certifi>=2026.7.22,<2027",
 ]
 mutation = ["mutmut>=3.8,<4"]
-security = ["pip-audit>=2.9,<3", "semgrep>=1.100,<2"]
+security = [
+    "bandit>=1.8,<2",
+    "pip-audit>=2.9,<3",
+]
+
+[[tool.uv.index]]
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/evidhist"]
@@ -152,3 +159,10 @@ known_first_party = ["evidhist", "structure_metrics"]
 # uvicorn is the ASGI server entry used by `make run` (evidhist.api:app), not an import.
 # psycopg is referenced through the SQLAlchemy DSN scheme `postgresql+psycopg://`.
 DEP002 = ["uvicorn", "psycopg"]
+
+[tool.bandit]
+# 工程脚本按字面量参数调用项目工具（uv/pytest/psql 等），不接受外部输入；这三项只反映
+# "用到了 subprocess / 相对可执行路径"，无法区分安全用法，故显式豁免。真正的危险形态
+# （shell=True、os.system、eval/exec、pickle、关闭 TLS 校验）仍由 B602/B604/B605/B307/
+# B102/B301/B506/B501 拦截，见 tests/unit/test_security_scan.py 的植入负例。
+skips = ["B404", "B603", "B607"]

@@ -364,7 +364,7 @@ pytest-cov 统计 `src/evidhist` 的行与分支覆盖，当前门槛为 90%，�
 | pre-commit | 提交前检查格式与类型，推送前运行快速测试 | `.pre-commit-config.yaml`，`make hooks` |
 | mutmut | 检查核心测试是否捕获逻辑变更，拒绝空/未完成报告 | `make mutation`，报告门槛脚本 |
 | Hypothesis | Unicode、版本与位置边界的属性检查 | `tests/property/` |
-| Semgrep | 本地项目规则扫描命令执行、动态执行、反序列化、TLS 模式 | `.semgrep.yml`，`make sast` |
+| bandit（2026-10-18 起替代 Semgrep） | 扫描命令执行、动态执行、反序列化、TLS 模式 | `pyproject.toml` 的 `[tool.bandit]`，`make sast` |
 
 Pydantic 结构校验与业务正确性分别检查；严格模式在 Python 对象和 JSON 入口存在差异，因此对实际 HTTP/模型入口做契约测试。[严格模式](https://docs.pydantic.dev/latest/concepts/strict_mode/)
 
@@ -393,7 +393,7 @@ Pyright 的 npm 引擎由 Microsoft 维护；当前 Python 工具链使用 PyPI 
 
 pip-audit 使用从锁文件导出的完整传递依赖及哈希，分别解释漏洞发现与无法完成审计的失败；`--no-deps --disable-pip` 基于完整精确锁定输入，避免二次解析。[pip-audit](https://github.com/pypa/pip-audit)
 
-Semgrep 使用受版本控制的本地规则与 `--error --strict`，发现问题、解析失败和工具错误均使检查失败。当前规则是项目基础护栏；后续按真实风险扩充规则和带注释的正反例，不能把无命中解释为不存在漏洞。[Semgrep CLI](https://docs.semgrep.dev/cli-reference)
+bandit 使用受版本控制的本地配置（`[tool.bandit]`，含逐条说明的豁免），发现任何命中或工具错误都使检查失败；`tests/unit/test_security_scan.py` 用植入的危险模式（`os.system`、`eval`、`pickle.loads`、`verify=False`）验证门槛真的会失败。当前规则是项目基础护栏；后续按真实风险扩充规则和带注释的正反例，不能把无命中解释为不存在漏洞。[bandit](https://bandit.readthedocs.io/)
 
 pre-commit 当前本地 hooks 使用 4.4+ 的 `language: unsupported`，依赖已安装的项目环境；配置本身纳入版本控制，hooks 安装在当前仓库。规则误报按具体位置、原因及复核记录处理。[pre-commit](https://pre-commit.com/)
 

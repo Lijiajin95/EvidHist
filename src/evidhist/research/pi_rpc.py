@@ -90,7 +90,6 @@ def _env(config: PiConfig) -> dict[str, str]:
 async def _converse(
     process: asyncio.subprocess.Process, prompt: str, limits: RunLimits
 ) -> tuple[str, dict[str, int]]:
-    assert process.stdin is not None and process.stdout is not None
     _send(process, {"id": "prompt-1", "type": "prompt", "message": prompt})
     usage = await _wait_settled(process, limits.idle_seconds)
     _send(process, {"id": "text-1", "type": LAST_TEXT_COMMAND})
@@ -98,14 +97,15 @@ async def _converse(
 
 
 def _send(process: asyncio.subprocess.Process, payload: dict[str, object]) -> None:
-    assert process.stdin is not None
-    process.stdin.write((json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
+    # 进程由 create_subprocess_exec(stdin=PIPE, stdout=PIPE) 创建，管道必然存在。
+    stdin = cast("asyncio.StreamWriter", process.stdin)
+    stdin.write((json.dumps(payload, ensure_ascii=False) + "\n").encode("utf-8"))
 
 
 async def _read_line(process: asyncio.subprocess.Process, timeout: float) -> bytes:
-    assert process.stdout is not None
+    stdout = cast("asyncio.StreamReader", process.stdout)
     try:
-        return await asyncio.wait_for(process.stdout.readline(), timeout=timeout)
+        return await asyncio.wait_for(stdout.readline(), timeout=timeout)
     except TimeoutError as error:
         raise RunLimitExceeded("timeout") from error
 

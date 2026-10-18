@@ -76,7 +76,7 @@ audit:
 	.venv/bin/pip-audit --strict --no-deps --disable-pip --cache-dir .cache/pip-audit -r reports/requirements-audit.txt -f json -o reports/dependency-audit.json
 
 sast:
-	.venv/bin/python scripts/run_semgrep.py
+	.venv/bin/python scripts/run_bandit.py
 
 security: audit sast
 

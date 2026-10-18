@@ -430,7 +430,7 @@ extend_exclude = ["mutants", "\\.cache", "\\.toolchain"]
 known_first_party = ["evidhist"]
 ```
 
-参考入口为 `lint-imports` 和 `deptry .`。检查脚本的运行依赖也要声明；本项目 `scripts/run_semgrep.py` 直接使用 certifi，应核查声明分组，不依赖恰好安装的传递包。psycopg 驱动及 uvicorn 的字符串/CLI 用法若被报未用，例外应逐包解释并配启动证据，不能整个关闭 DEP002。[Import Linter](https://import-linter.readthedocs.io/en/stable/contract_types/forbidden/)、[deptry](https://deptry.com/usage/)
+参考入口为 `lint-imports` 和 `deptry .`。检查脚本的运行依赖也要声明；本项目 `scripts/` 下的检查脚本必须声明其运行依赖所属分组（例如 SAST 工具 bandit 属于 `security` 组），不依赖恰好安装的传递包；2026-10-18 起 semgrep 已由 bandit 替代。psycopg 驱动及 uvicorn 的字符串/CLI 用法若被报未用，例外应逐包解释并配启动证据，不能整个关闭 DEP002。[Import Linter](https://import-linter.readthedocs.io/en/stable/contract_types/forbidden/)、[deptry](https://deptry.com/usage/)
 
 ### 11.2 前端依赖边界
 

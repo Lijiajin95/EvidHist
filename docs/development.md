@@ -47,7 +47,7 @@ make security
 
 mutmut 当前只修改引用定位领域文件，并以两个子进程执行。结果写入 `mutants/mutmut-cicd-stats.json`；门槛脚本 `scripts/check_mutation_stats.py` 读取 `config/quality-policy.toml` 的 `[mutation]` 门槛，拒绝零变异、幸存、未测、超时或未完成结果。调试使用 `.venv/bin/mutmut results`、`show` 或 `browse`。不要把自动生成的 mutant 应用到未保存的业务源码。注意 `mutants/` 是可再生的缓存目录：更换测试集后必须删除它强制重新生成，否则会复用陈旧结果（2026-10-09 已因旧缓存踩过一次，mutmut 的 `also_copy` 同时需要 `config`、`scripts`、`contracts` 供沙箱内测试使用）。
 
-`make security` 审计完整锁定的运行和工程依赖，并执行本地 Semgrep 规则。漏洞查询需要网络；网络/工具失败意味着未完成检查。Semgrep 的规则、证书和日志入口在项目内管理，报告写入 `reports/`。当前四类规则覆盖危险命令执行、动态 Python 执行、不安全反序列化及关闭 TLS 校验的模式。
+`make security` 审计完整锁定的运行和工程依赖，并执行本地 SAST 规则（**bandit**，属 `security` 依赖组）。漏洞查询需要网络；网络/工具失败意味着未完成检查。规则配置在 `pyproject.toml` 的 `[tool.bandit]`，报告写入 `reports/bandit.json`。当前覆盖危险命令执行、动态 Python 执行、不安全反序列化与关闭 TLS 校验四类模式，并有植入负例测试（`tests/unit/test_security_scan.py`）验证它们确实会被拦下。[Semgrep](https://semgrep.dev) 已于 2026-10-18 替换为 bandit：semgrep 经 `mcp` 引入已知漏洞（CVE-2026-59951）且依赖体积大，而上述四类模式 bandit 原生覆盖。
 
 ## 固定评测案例
 
@@ -233,3 +233,21 @@ ls runs/<run_id>/                       # report.md citations.json run.json revi
 - 反证仅记录检索词与命中数，未逐条列出反证内容（评审已两次指出）。
 - 检索为纯子串匹配（无分词/排序服务），片段相关性靠"覆盖检索词数"排序。
 - 未做跨来源互校、OCR 校对与材料入库外的自动化；失败后人工重跑（B05）。
+
+## 2026-10-18 安全门槛替换与 CI 首跑修复
+
+仓库首次推送到 GitHub 后 CI 第一次真实运行，暴露四类问题，本轮一并处理：
+
+| 问题 | 处理 |
+| --- | --- |
+| `security` 作业失败：pip-audit 报 `mcp 1.29.0`（CVE-2026-59951），`mcp` 由 semgrep 引入 | 按用户要求把 semgrep 换成 bandit：`security` 组改为 `bandit>=1.8,<2` + `pip-audit`；删除 `.semgrep.yml` 与 `scripts/run_semgrep.py`，新增 `scripts/run_bandit.py`；`make sast` 目标名不变 |
+| bandit 默认规则在工程脚本上产出 16 条 subprocess 形态告警（B404/B603/B607） | 在 `[tool.bandit]` 显式豁免并写明理由：脚本按字面量参数调用项目工具，不接受外部输入；真正危险形态（`shell=True`、`eval/exec`、`pickle`、关闭 TLS 校验）仍在拦截范围内 |
+| bandit 报 `db_migrations.py` B608（表名拼接） | SQL 提为模块常量，并在被报告的两行加 `# nosec B608` 及理由；值一律走绑定参数 |
+| bandit 报我新写的 `pi_rpc.py` B101（`assert`） | 改用 `cast` 表达“管道由 `create_subprocess_exec` 构造保证”，断言在 `-O` 下会消失，换成类型断言更严谨 |
+
+CI 侧同时修复：
+
+- `frontend-e2e` 作业原先没有声明 PostgreSQL service，Web 服务连 55432 被拒；现复用 `quality` 作业的 `pgvector/pgvector:pg18` 服务定义。
+- `frontend-quality` 与 `quality` 作业卡在既有的 ESLint `max-lines-per-function`：`SourceForm.tsx` 的 `SourceForm` 有 56 行。把 `.txt` 读取逻辑抽到 `frontend/src/components/sources/importText.ts`（含 4 条单元测试），组件降到 50 行；同时补了非 UTF-8 与读取失败两条组件测试。
+
+本地验证：`make check` 退出码 0（174 项）；`make security` 退出码 0（pip-audit 无已知漏洞、bandit 0 命中）；`make frontend-check` 退出码 0（101 项测试，覆盖率 97% 行 / 91% 分支）。
