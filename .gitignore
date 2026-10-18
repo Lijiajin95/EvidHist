@@ -30,3 +30,6 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/reports/
 frontend/stryker.log
+
+# 本地研究运行产物（报告、引文数据、日志），不纳入版本库
+runs/

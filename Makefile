@@ -6,7 +6,7 @@ FAST_TESTS := tests/unit tests/property tests/component tests/scenario
 
 DEMO_DATABASE_URL ?= postgresql+psycopg://evidhist:evidhist@127.0.0.1:55433/evidhist_demo
 
-.PHONY: setup format lint typecheck test check db-up db-down test-integration test-system coverage mutation audit sast security eval-fixture hooks precommit run commit-policy-config api-schema api-schema-check structure-metrics import-lint deptry pylint coverage-thresholds frontend-setup frontend-check frontend-e2e frontend-mutation frontend-audit frontend-run migrate demo-up demo-down demo-migrate demo-seed demo-run
+.PHONY: setup format lint typecheck test check db-up db-down test-integration test-system coverage mutation audit sast security eval-fixture hooks precommit import-ming research-run run commit-policy-config api-schema api-schema-check structure-metrics import-lint deptry pylint coverage-thresholds frontend-setup frontend-check frontend-e2e frontend-mutation frontend-audit frontend-run migrate demo-up demo-down demo-migrate demo-seed demo-run
 
 setup:
 	$(UV) sync --frozen --default-index https://pypi.org/simple --group mutation --group security
@@ -91,6 +91,13 @@ commit-policy-config:
 
 precommit:
 	PRE_COMMIT_HOME=$(CURDIR)/.cache/pre-commit .venv/bin/pre-commit run --all-files
+
+import-ming:
+	.venv/bin/python scripts/import_ming_pilot.py --database-url '$(if $(EVIDHIST_DATABASE_URL),$(EVIDHIST_DATABASE_URL),$(DEMO_DATABASE_URL))'
+
+research-run:
+	.venv/bin/python scripts/run_research.py --database-url '$(if $(EVIDHIST_DATABASE_URL),$(EVIDHIST_DATABASE_URL),$(DEMO_DATABASE_URL))' \
+		--question '$(QUESTION)' --executor '$(EXECUTOR)' --reviewer '$(REVIEWER)'
 
 run:
 	.venv/bin/uvicorn evidhist.api:app --host 127.0.0.1 --port 8000
