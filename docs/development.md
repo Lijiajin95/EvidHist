@@ -263,3 +263,14 @@ CI 质量作业还暴露两处与本轮改动相关的问题，已一并处理�
 | 分支覆盖 82% 低于 90% | 补 `review.py` 契约测试（14 例：判定、字段、缺评、超时、协议错误）与检索/解析不变量测试（20 例：检索词拆分、片段窗口与归并、论断与引文窄化、RPC 容错解析），分支覆盖升至 94% |
 
 实测：`make coverage` 退出码 0（行 98.9%、分支 93.8%、改动行 100%）；`make check` 219 项通过。
+
+## 对话功能（2026-10-19 起为界面主入口）
+
+设计与决策见[对话功能技术方案](chat-feature-plan-2026-10-18.md)。要点：
+
+- **启动**：`make demo-run`（后端 127.0.0.1:8000，指向演示库）+ `make frontend-run`（前端 127.0.0.1:5173）。界面只保留对话；材料与论断由对话内的工具读写，不再有独立页面入口。
+- **PI 配置（环境变量）**：`EVIDHIST_PI_PROVIDER`（默认 `cc-switch-open-code-go`）、`EVIDHIST_PI_MODEL`（默认 `deepseek-v4.1-flash`）、`EVIDHIST_PI_HOME`、`EVIDHIST_PI_BIN_DIR`、`EVIDHIST_PI_COMMAND`（测试指向假 PI）、`EVIDHIST_CHAT_WALL_SECONDS`（每轮墙钟上限，默认 300）、`EVIDHIST_CHAT_REVIEW=0` 关闭评审。
+- **工具**（宿主代理执行，PI 本体零工具）：`list_materials`／`search`／`read`／`verify_citation`（程序硬校验）／`search_papers`（OpenAlex＋Crossref 题录，单源失败如实记录）／`import_paper_record`（题录入库，DOI/URL 幂等，仅题录字段）。
+- **接口**：`POST/GET /v1/conversations`、`GET /v1/conversations/{id}`、`POST /v1/conversations/{id}/messages`（SSE）、`POST /v1/messages/{id}/stop`（幂等）。事件先落库（`message_events`）再推送，刷新后可重建；`token` 为 PI 的真实 `text_delta` 增量。
+- **验证**：`make check`、`make coverage`、`make frontend-check`；`npm run e2e` 含对话用例（e2e 后端固定使用 `tests/fixtures/fake_pi.py`，不调用真实模型）。
+- **已知限制**：引文以只读卡片呈现（无正文内联标记）；界面未提供「深度思考／智能搜索」开关（需要后端按轮次选项支持）；工作台视图（材料／论断／引文定位工具）代码与测试保留但无界面入口。

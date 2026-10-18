@@ -64,7 +64,7 @@ class PiExecutor:
             raw, tokens, "counter", self._counter_prompt(claims, counter_passages), limits
         )
         return Transcript(
-            claims=_claims(claims),
+            claims=parse_claims(claims),
             queries=tuple(queries),
             counter_queries=tuple(counter_queries),
             counter_findings=tuple(_string_list(findings.get("findings"))),
@@ -309,7 +309,7 @@ def _string_list(value: object) -> list[str]:
     return [item for item in cast("list[object]", value) if isinstance(item, str) and item.strip()]
 
 
-def _claims(payload: dict[str, object]) -> tuple[ClaimDraft, ...]:
+def parse_claims(payload: dict[str, object]) -> tuple[ClaimDraft, ...]:
     claims: list[ClaimDraft] = []
     for item in _object_list(payload.get("claims")):
         statement = item.get("statement")

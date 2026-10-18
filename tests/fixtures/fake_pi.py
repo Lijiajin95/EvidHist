@@ -44,9 +44,48 @@ def _payload_with(message: str, key: str) -> dict | None:
     return None
 
 
+def _chat_reply(message: str) -> str | None:
+    """对话循环的三种提示词：决定动作、Markdown 回答、论断与引文。"""
+    if "请输出本轮论断与逐字引文" in message:
+        citations = [
+            item
+            for item in _extract_objects(message)
+            if {"version_id", "start", "end"} <= set(item)
+            and ("exact_quote" in item or "quote" in item)
+        ]
+        if not citations:
+            return json.dumps({"claims": []}, ensure_ascii=False)
+        citation = citations[-1]
+        exact_quote = citation.get("exact_quote") or citation["quote"]
+        claim = {
+            "statement": "于謙主張固守京師。",
+            "citations": [
+                {
+                    "version_id": citation["version_id"],
+                    "start": citation["start"],
+                    "end": citation["end"],
+                    "exact_quote": exact_quote,
+                }
+            ],
+        }
+        return json.dumps({"claims": [claim]}, ensure_ascii=False)
+    if "请用 Markdown 回答" in message:
+        return "## 结论\n\n于謙主張固守京師，见《明史》卷170。"
+    if "请只输出下一步动作" in message:
+        if "FORCE_TOOL" in message or "（无）" in message:
+            action = {"action": "tool", "tool": "search", "arguments": {"query": "于謙"}}
+        else:
+            action = {"action": "final"}
+        return json.dumps(action, ensure_ascii=False)
+    return None
+
+
 def _reply(mode: str, message: str) -> str:
     if mode == "garbage":
         return "我不会输出 JSON。"
+    chat = _chat_reply(message)
+    if chat is not None:
+        return chat
     if "verdict" in message:
         review = {
             "verdict": "pass",
@@ -92,7 +131,23 @@ def _emit(records: list[dict]) -> None:
     sys.stdout.flush()
 
 
-def _prompt_records(request_id: object, mode: str) -> list[dict]:
+def _chunks(text: str, size: int = 8) -> list[str]:
+    return [text[index : index + size] for index in range(0, len(text), size)] or [""]
+
+
+def _delta_records(text: str) -> list[dict]:
+    """按 PI 的真实事件形状逐块输出正文增量（text_delta）。"""
+    return [
+        {
+            "type": "message_update",
+            "usage": {"input": 0, "output": 0},
+            "assistantMessageEvent": {"type": "text_delta", "contentIndex": 0, "delta": chunk},
+        }
+        for chunk in _chunks(text)
+    ]
+
+
+def _prompt_records(request_id: object, mode: str, text: str = "") -> list[dict]:
     records: list[dict] = [
         {
             "id": request_id,
@@ -103,6 +158,7 @@ def _prompt_records(request_id: object, mode: str) -> list[dict]:
         },
         {"type": "agent_start"},
         {"type": "turn_start"},
+        *_delta_records(text),
         {
             "type": "turn_end",
             "message": {
@@ -131,7 +187,7 @@ def main() -> int:
         command = record.get("type")
         if command == "prompt":
             text = _reply(mode, str(record.get("message", "")))
-            _emit(_prompt_records(record.get("id"), mode))
+            _emit(_prompt_records(record.get("id"), mode, text))
             if mode == "unsettled":
                 time.sleep(30)
         elif command == "get_last_assistant_text":

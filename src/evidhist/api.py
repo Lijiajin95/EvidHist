@@ -18,6 +18,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from evidhist.api_claims import router as claims_router
+from evidhist.api_conversations import router as conversations_router
 from evidhist.api_sources import router as sources_router
 from evidhist.database import DatabaseProbe, PostgresDatabase
 from evidhist.db import create_engine, create_session_factory
@@ -106,6 +107,7 @@ def create_app(
 
     application.include_router(sources_router)
     application.include_router(claims_router)
+    application.include_router(conversations_router)
     return application
 
 

@@ -16,7 +16,6 @@ from evidhist.research.executor import BudgetedTools, RunLimitExceeded
 from evidhist.research.pi_executor import (
     PiExecutor,
     _citations,
-    _claims,
     _Hit,
     _passages,
     _search,
@@ -24,6 +23,7 @@ from evidhist.research.pi_executor import (
     _string_list,
     _terms,
     _windows,
+    parse_claims,
 )
 from evidhist.research.pi_rpc import (
     PiConfig,
@@ -72,7 +72,7 @@ def test_claims_require_statement_and_usable_citations() -> None:
         ]
     }
 
-    claims = _claims(payload)
+    claims = parse_claims(payload)
 
     assert len(claims) == 1
     assert claims[0].statement == "有引文"

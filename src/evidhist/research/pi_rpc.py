@@ -10,6 +10,7 @@ import asyncio
 import json
 import os
 import re
+from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import cast
@@ -20,6 +21,21 @@ SETTLED_EVENT = "agent_settled"
 LAST_TEXT_COMMAND = "get_last_assistant_text"
 JSON_START = re.compile(r"[{]")
 PI_THINKING_DEFAULT = "minimal"
+
+
+@dataclass(frozen=True)
+class TextDelta:
+    """一次正文增量（PI 的 `assistantMessageEvent.text_delta`）。"""
+
+    text: str
+
+
+@dataclass(frozen=True)
+class TurnResult:
+    """一轮对话结束时的完整文本与 token 用量。"""
+
+    text: str
+    usage: dict[str, int]
 
 
 @dataclass(frozen=True)
@@ -139,6 +155,57 @@ async def _wait_text(process: asyncio.subprocess.Process, idle_seconds: float) -
                 if isinstance(data, dict)
                 else ""
             )
+
+
+def _text_delta(record: dict[str, object]) -> str:
+    """取出正文增量；推理增量（thinking_delta）不展示、不落库。"""
+    event = record.get("assistantMessageEvent")
+    if not isinstance(event, dict):
+        return ""
+    entry = cast("dict[str, object]", event)
+    if entry.get("type") != "text_delta":
+        return ""
+    delta = entry.get("delta")
+    return delta if isinstance(delta, str) else ""
+
+
+async def stream_pi(
+    config: PiConfig, prompt: str, limits: RunLimits
+) -> AsyncGenerator[TextDelta | TurnResult]:
+    """跑一次 PI RPC 会话：先逐字产出正文增量，最后产出完整文本与用量。"""
+    argv = [config.command, *_rpc_flags(config)]
+    process = await asyncio.create_subprocess_exec(
+        *argv,
+        stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        env=_env(config),
+        cwd=str(config.workdir),
+    )
+    try:
+        async with asyncio.timeout(limits.wall_seconds):
+            _send(process, {"id": "prompt-1", "type": "prompt", "message": prompt})
+            usage: dict[str, int] = {"input": 0, "output": 0}
+            while True:
+                line = await _read_line(process, limits.idle_seconds)
+                if not line:
+                    raise ExecutorError("process_exited")
+                record = _decode(line)
+                if record is None:
+                    continue
+                add_tokens(usage, _usage_of(record))
+                delta = _text_delta(record)
+                if delta:
+                    yield TextDelta(delta)
+                if record.get("type") == SETTLED_EVENT:
+                    break
+            _send(process, {"id": "text-1", "type": LAST_TEXT_COMMAND})
+            text = await _wait_text(process, limits.idle_seconds)
+            yield TurnResult(text=text, usage=usage)
+    except TimeoutError as error:
+        raise RunLimitExceeded("timeout") from error
+    finally:
+        await _shutdown(process)
 
 
 def _decode(line: bytes) -> dict[str, object] | None:

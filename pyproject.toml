@@ -17,6 +17,7 @@ dependencies = [
   "sqlalchemy[asyncio]>=2.0,<3",
   "uvicorn>=0.34,<1",
   "langgraph>=1.2.16,<2",
+  "httpx2>=2.13,<3",
 ]
 
 [project.scripts]
@@ -25,7 +26,6 @@ evidhist-eval-quotes = "evidhist.evaluation:main"
 [dependency-groups]
 dev = [
   "uv==0.12.24",
-  "httpx2>=2.13,<3",
   "hypothesis>=6.125,<7",
   "pre-commit>=4.4,<5",
   "pyright>=1.1.400,<2",

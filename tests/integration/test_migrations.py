@@ -81,7 +81,16 @@ async def test_fresh_database_applies_all_migrations_once(fresh_database_url: st
         }
     await engine.dispose()
 
-    assert executed == ["0001_init.sql"]
+    assert executed == ["0001_init.sql", "0002_conversations.sql"]
     assert rerun == []
-    assert {"sources", "text_versions", "claims", "evidence", "schema_migrations"} <= tables
-    assert recorded == {"0001_init.sql"}
+    assert {
+        "sources",
+        "text_versions",
+        "claims",
+        "evidence",
+        "conversations",
+        "messages",
+        "message_events",
+        "schema_migrations",
+    } <= tables
+    assert recorded == {"0001_init.sql", "0002_conversations.sql"}
