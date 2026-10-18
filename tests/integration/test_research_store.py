@@ -6,13 +6,15 @@
 - 重复导入幂等（不新增版本、不新增来源）；
 - 入库版本可直接用于引文硬校验（M04）。
 
-测试独立核对 `crawler/data-ming/` 的原始文件与 `manifest.jsonl`，
-不复用导入脚本内部的选材或散列计算。
+测试独立核对语料目录的原始文件与 `manifest.jsonl`，不复用导入脚本内部的选材或散列计算。
+本地提供 `crawler/data-ming/` 时直接核对真实 25 卷；该目录不随代码发布（CI 无此目录）时，
+按同样的目录与登记结构生成合成语料，断言不变，从而在两种环境都真实执行导入路径。
 """
 
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -70,10 +72,58 @@ PILOT_VOLUMES: dict[str, tuple[str, ...]] = {
 EXPECTED_TOTAL = sum(len(volumes) for volumes in PILOT_VOLUMES.values())
 
 
-def manifest_pages() -> dict[tuple[str, str], dict]:
+SYNTHETIC_SENTENCE = "于謙守京師，戒嚴九門。"
+
+
+def build_synthetic_corpus(root: Path) -> Path:
+    """生成与真实语料同构的 25 卷语料：raw 文本 + 追加式 manifest.jsonl。"""
+    raw = root / "raw"
+    raw.mkdir(parents=True, exist_ok=True)
+    records: list[dict] = []
+    for work, volumes in PILOT_VOLUMES.items():
+        records.append(
+            {"kind": "work", "work": work, "url": f"https://zh.wikisource.org/wiki/{work}"}
+        )
+        for volume in volumes:
+            name = f"{work}-{volume}.txt"
+            lead = "于謙傳。" if (work, volume) == ("明史", "卷170") else ""
+            text = f"{lead}{volume}記事。{SYNTHETIC_SENTENCE}"
+            (raw / name).write_text(text, encoding="utf-8")
+            records.append(
+                {
+                    "kind": "page",
+                    "work": work,
+                    "title": f"{work}/{volume}",
+                    "status": "stored",
+                    "path": f"raw/{name}",
+                    "sha256": content_sha256(text),
+                    "version": {"modified": "2026-10-18"},
+                    "license": {"id": "CC BY-SA 4.0"},
+                    "allowed_uses": {"note": "合成语料，仅用于集成测试。"},
+                }
+            )
+    lines = [json.dumps(record, ensure_ascii=False) for record in records]
+    (root / "manifest.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return root
+
+
+@pytest.fixture(scope="session")
+def corpus(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """真实语料优先；CI 等无本地语料的环境使用同构合成语料。
+
+    设 EVIDHIST_MING_CORPUS=synthetic 可强制走合成语料，便于在本地核对 CI 分支。
+    """
+    if os.environ.get("EVIDHIST_MING_CORPUS") == "synthetic":
+        return build_synthetic_corpus(tmp_path_factory.mktemp("ming-corpus"))
+    if (DATA / "manifest.jsonl").exists():
+        return DATA
+    return build_synthetic_corpus(tmp_path_factory.mktemp("ming-corpus"))
+
+
+def manifest_pages(root: Path) -> dict[tuple[str, str], dict]:
     """最新状态为 stored 的页面记录，按 (作品, 卷次) 索引。"""
     latest: dict[tuple[str, str], dict] = {}
-    for line in (DATA / "manifest.jsonl").read_text(encoding="utf-8").splitlines():
+    for line in (root / "manifest.jsonl").read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         record = json.loads(line)
@@ -86,9 +136,17 @@ def manifest_pages() -> dict[tuple[str, str], dict]:
     }
 
 
-def run_import(database_url: str) -> dict:
+def run_import(database_url: str, root: Path) -> dict:
     result = subprocess.run(
-        [sys.executable, str(SCRIPT), "--database-url", database_url, "--json"],
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--database-url",
+            database_url,
+            "--data-dir",
+            str(root),
+            "--json",
+        ],
         capture_output=True,
         text=True,
         cwd=REPO,
@@ -125,13 +183,15 @@ async def version_count(factory) -> int:
         )
 
 
-async def test_import_stores_every_pilot_volume_byte_for_byte(store, migrated: str) -> None:
-    summary = run_import(migrated)
+async def test_import_stores_every_pilot_volume_byte_for_byte(
+    store, migrated: str, corpus: Path
+) -> None:
+    summary = run_import(migrated, corpus)
     assert summary["versions_created"] == EXPECTED_TOTAL
     assert summary["versions_existing"] == 0
     assert {volume["work"] for volume in summary["volumes"]} == set(PILOT_VOLUMES)
 
-    pages = manifest_pages()
+    pages = manifest_pages(corpus)
     async with store() as session:
         rows = (
             await session.execute(
@@ -154,22 +214,22 @@ async def test_import_stores_every_pilot_volume_byte_for_byte(store, migrated: s
             f"{title}/{volume} 散列与 manifest 不一致"
         )
         assert content_sha256(version.content) == record["sha256"]
-        assert version.content == (DATA / record["path"]).read_text(encoding="utf-8")
+        assert version.content == (corpus / record["path"]).read_text(encoding="utf-8")
         assert "CC BY-SA" in usage_terms[title]
     assert seen == {(work, volume) for work, volumes in PILOT_VOLUMES.items() for volume in volumes}
 
 
-async def test_import_is_idempotent(store, migrated: str) -> None:
-    first = run_import(migrated)
-    second = run_import(migrated)
+async def test_import_is_idempotent(store, migrated: str, corpus: Path) -> None:
+    first = run_import(migrated, corpus)
+    second = run_import(migrated, corpus)
     assert first["versions_created"] == EXPECTED_TOTAL
     assert second["versions_created"] == 0
     assert second["versions_existing"] == EXPECTED_TOTAL
     assert await version_count(store) == EXPECTED_TOTAL
 
 
-async def test_imported_version_serves_citation_check(store, migrated: str) -> None:
-    run_import(migrated)
+async def test_imported_version_serves_citation_check(store, migrated: str, corpus: Path) -> None:
+    run_import(migrated, corpus)
     async with store() as session:
         row = (
             await session.execute(
@@ -225,9 +285,9 @@ def run_cli(database_url: str, runs_dir: Path, run_id: str) -> dict:
 
 
 async def test_cli_run_persists_claims_evidence_and_artifacts(
-    store, migrated: str, tmp_path: Path
+    store, migrated: str, corpus: Path, tmp_path: Path
 ) -> None:
-    run_import(migrated)
+    run_import(migrated, corpus)
     runs_dir = tmp_path / "runs"
     summary = run_cli(migrated, runs_dir, "it-run")
 

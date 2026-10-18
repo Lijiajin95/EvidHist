@@ -71,37 +71,39 @@ class MaterialGapError(RuntimeError):
     """缺少选定卷次或原文与登记不一致。"""
 
 
-def _manifest_records() -> list[dict]:
-    path = DATA_DIR / "manifest.jsonl"
+def _manifest_records(corpus: Path = DATA_DIR) -> list[dict]:
+    path = corpus / "manifest.jsonl"
     return [
         json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
     ]
 
 
-def latest_pages() -> dict[tuple[str, str], dict]:
+def latest_pages(corpus: Path = DATA_DIR) -> dict[tuple[str, str], dict]:
     """按 (作品, 卷次) 取最新一条页面记录（台账只追加，后写覆盖先写）。"""
     latest: dict[tuple[str, str], dict] = {}
-    for record in _manifest_records():
+    for record in _manifest_records(corpus):
         if record.get("kind") in ("page", "alias"):
             latest[(record.get("work", ""), record.get("title", "").split("/")[-1])] = record
     return latest
 
 
-def work_origins() -> dict[str, str]:
+def work_origins(corpus: Path = DATA_DIR) -> dict[str, str]:
     origins: dict[str, str] = {}
-    for record in _manifest_records():
+    for record in _manifest_records(corpus):
         if record.get("kind") == "work":
             url = str(record.get("url", "")).split("?")[0]
             origins[record.get("work", "")] = f"中文维基文库 {url}"
     return origins
 
 
-def load_volume(work: str, volume: str, pages: dict[tuple[str, str], dict]) -> tuple[str, dict]:
+def load_volume(
+    work: str, volume: str, pages: dict[tuple[str, str], dict], corpus: Path = DATA_DIR
+) -> tuple[str, dict]:
     """读一卷原文并核对登记；返回 (文本, 页面记录)。"""
     record = pages.get((work, volume))
     if record is None or record.get("status") != "stored":
         raise MaterialGapError(f"{work}/{volume}: manifest 中没有 stored 记录")
-    text = (DATA_DIR / record["path"]).read_text(encoding="utf-8")
+    text = (corpus / record["path"]).read_text(encoding="utf-8")
     digest = content_sha256(text)
     if digest != record.get("sha256"):
         raise MaterialGapError(
@@ -127,13 +129,13 @@ def version_label(volume: str, record: dict) -> str:
     return label
 
 
-def plan() -> list[tuple[str, str, str, dict]]:
+def plan(corpus: Path = DATA_DIR) -> list[tuple[str, str, str, dict]]:
     """返回 [(作品, 卷次, 原文, 页面记录)]，任何缺卷/散列不符都在这里失败。"""
-    pages = latest_pages()
+    pages = latest_pages(corpus)
     items: list[tuple[str, str, str, dict]] = []
     for work, volumes in PILOT_VOLUMES.items():
         for volume in volumes:
-            text, record = load_volume(work, volume, pages)
+            text, record = load_volume(work, volume, pages, corpus)
             items.append((work, volume, text, record))
     return items
 
@@ -182,15 +184,17 @@ async def _import_volume(run: _ImportRun, item: tuple[str, str, str, dict]) -> N
     )
 
 
-def _origins() -> dict[str, str]:
-    origins = work_origins()
+def _origins(corpus: Path = DATA_DIR) -> dict[str, str]:
+    origins = work_origins(corpus)
     fallback = "中文维基文库 https://zh.wikisource.org/"
     for work in PILOT_VOLUMES:
         origins[work] = origins.get(work) or origins.get("明史", fallback)
     return origins
 
 
-async def import_materials(database_url: str, items: list[tuple[str, str, str, dict]]) -> dict:
+async def import_materials(
+    database_url: str, items: list[tuple[str, str, str, dict]], corpus: Path = DATA_DIR
+) -> dict:
     engine = create_engine(database_url)
     factory = create_session_factory(engine)
     summary: dict = {
@@ -201,7 +205,7 @@ async def import_materials(database_url: str, items: list[tuple[str, str, str, d
     }
     try:
         async with factory() as session:
-            run = _ImportRun(session=session, origins=_origins(), sources={}, summary=summary)
+            run = _ImportRun(session=session, origins=_origins(corpus), sources={}, summary=summary)
             for item in items:
                 await _import_volume(run, item)
             await session.commit()
@@ -217,10 +221,14 @@ def main() -> int:
     )
     parser.add_argument("--dry-run", action="store_true", help="只核对原文与登记，不连数据库")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出摘要（最后一行）")
+    parser.add_argument(
+        "--data-dir", default=str(DATA_DIR), help="语料目录（含 manifest.jsonl 与 raw 文本）"
+    )
     args = parser.parse_args()
+    corpus = Path(args.data_dir)
 
     try:
-        items = plan()
+        items = plan(corpus)
     except MaterialGapError as error:
         print(f"材料核对失败：{error}", file=sys.stderr)
         return 1
@@ -238,7 +246,7 @@ def main() -> int:
             print("需要 --database-url 或 EVIDHIST_DATABASE_URL，拒绝猜测目标库。", file=sys.stderr)
             return 2
         try:
-            summary = asyncio.run(import_materials(url, items))
+            summary = asyncio.run(import_materials(url, items, corpus))
         except Exception as error:  # 数据库不可用或写入失败
             print(f"导入失败：{error}", file=sys.stderr)
             return 2
