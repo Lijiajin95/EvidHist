@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { createSseParser } from "../../src/api/chat";
-import { chatEventSchema, conversationSchema, messageSchema } from "../../src/domain/chatContract";
+import {
+  chatEventSchema,
+  conversationSchema,
+  messageSchema,
+  stopResultSchema,
+} from "../../src/domain/chatContract";
 
 describe("createSseParser", () => {
   it("parses one complete event", () => {
@@ -82,8 +87,71 @@ describe("chat contracts", () => {
     expect(messageSchema.safeParse({ ...message, role: undefined }).success).toBe(false);
   });
 
+  it("accepts every documented role and refuses unknown ones", () => {
+    const base = {
+      id: "3cf22914-9798-49f6-bb28-1bc602077153",
+      content: "结论文本",
+      status: "done",
+      error: null,
+      created_at: "2026-10-18T15:01:34.082174+08:00",
+      events: [],
+    };
+
+    for (const role of ["user", "assistant", "system"] as const) {
+      expect(messageSchema.safeParse({ ...base, role }).success).toBe(true);
+    }
+    expect(messageSchema.safeParse({ ...base, role: "robot" }).success).toBe(false);
+  });
+
+  it("accepts every documented status and refuses unknown ones", () => {
+    const base = {
+      id: "3cf22914-9798-49f6-bb28-1bc602077153",
+      role: "assistant",
+      content: "",
+      error: null,
+      created_at: "2026-10-18T15:01:34.082174+08:00",
+      events: [],
+    };
+
+    for (const status of ["streaming", "done", "failed", "stopped"] as const) {
+      expect(messageSchema.safeParse({ ...base, status }).success).toBe(true);
+    }
+    expect(messageSchema.safeParse({ ...base, status: "paused" }).success).toBe(false);
+  });
+
+  it("requires the event payload to be an object", () => {
+    expect(
+      chatEventSchema.safeParse({ seq: 1, kind: "token", payload: { text: "a" } }).success,
+    ).toBe(true);
+    expect(chatEventSchema.safeParse({ seq: 1, kind: "token", payload: "text" }).success).toBe(
+      false,
+    );
+    expect(chatEventSchema.safeParse({ seq: 1, kind: "token" }).success).toBe(false);
+  });
+
   it("keeps unknown event kinds but requires seq and kind", () => {
     expect(chatEventSchema.parse({ seq: 2, kind: "future", payload: {} }).kind).toBe("future");
     expect(chatEventSchema.safeParse({ kind: "token", payload: {} }).success).toBe(false);
+  });
+
+  it("validates the stop result and keeps its fields", () => {
+    const parsed = stopResultSchema.parse({
+      message_id: "3cf22914-9798-49f6-bb28-1bc602077153",
+      stopped: true,
+    });
+
+    expect(parsed).toEqual({
+      message_id: "3cf22914-9798-49f6-bb28-1bc602077153",
+      stopped: true,
+    });
+    expect(
+      stopResultSchema.safeParse({ message_id: "3cf22914-9798-49f6-bb28-1bc602077153" }).success,
+    ).toBe(false);
+    expect(
+      stopResultSchema.safeParse({
+        message_id: "3cf22914-9798-49f6-bb28-1bc602077153",
+        stopped: "yes",
+      }).success,
+    ).toBe(false);
   });
 });
