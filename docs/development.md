@@ -274,3 +274,4 @@ CI 质量作业还暴露两处与本轮改动相关的问题，已一并处理�
 - **接口**：`POST/GET /v1/conversations`、`GET /v1/conversations/{id}`、`POST /v1/conversations/{id}/messages`（SSE）、`POST /v1/messages/{id}/stop`（幂等）。事件先落库（`message_events`）再推送，刷新后可重建；`token` 为 PI 的真实 `text_delta` 增量。
 - **验证**：`make check`、`make coverage`、`make frontend-check`；`npm run e2e` 含对话用例（e2e 后端固定使用 `tests/fixtures/fake_pi.py`，不调用真实模型）。
 - **已知限制**：引文以只读卡片呈现（无正文内联标记）；界面未提供「深度思考／智能搜索」开关（需要后端按轮次选项支持）；工作台视图（材料／论断／引文定位工具）代码与测试保留但无界面入口。
+- **显示规则**：回答里不出现内部标识（version_id/UUID）与码点区间，出处写「材料·卷次」并附逐字原文。旧会话的正文由前端 `answerText.cleanAnswerText` 渲染前隐去标识与区间，并以「已隐藏 N 处…」说明；旧事件的引文缺材料/卷次时，后端在 `GET /v1/conversations/{id}` 读取时补齐。
