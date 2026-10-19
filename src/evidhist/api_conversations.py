@@ -13,6 +13,7 @@ import os
 from collections.abc import AsyncGenerator, Sequence
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 from uuid import UUID
 
 import httpx2
@@ -24,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from evidhist.chat_service import (
     DEFAULT_TITLE,
+    MessageEvent,
     append_event,
     append_user_message,
     conversation_history,
@@ -182,6 +184,51 @@ async def get_conversations(request: Request, limit: int = 50) -> list[Conversat
         return [_conversation_out(row) for row in await list_conversations(session, limit=limit)]
 
 
+async def _version_labels(session: AsyncSession) -> dict[str, tuple[str, str]]:
+    """版本编号 → （材料名, 卷次）；只取标签列，不读正文。"""
+    rows = (
+        await session.execute(
+            select(SourceRow.title, TextVersionRow.id, TextVersionRow.label).join(
+                TextVersionRow, TextVersionRow.source_id == SourceRow.id
+            )
+        )
+    ).all()
+    return {str(version_id): (title, label.split("|")[0]) for title, version_id, label in rows}
+
+
+def _labelled_payload(
+    payload: dict[str, object], labels: dict[str, tuple[str, str]]
+) -> dict[str, object]:
+    """旧消息的引文载荷可能没有作品与卷次，读取时补齐（界面只显示材料·卷次）。"""
+    raw = payload.get("citations")
+    if not isinstance(raw, list):
+        return payload
+    enriched: list[object] = []
+    for item in cast("list[object]", raw):
+        if not isinstance(item, dict):
+            enriched.append(item)
+            continue
+        row = cast("dict[str, object]", item)
+        work, volume = labels.get(str(row.get("version_id")), ("", ""))
+        enriched.append(
+            {
+                **row,
+                "work": row.get("work") or work,
+                "volume": row.get("volume") or volume,
+            }
+        )
+    return {**payload, "citations": enriched}
+
+
+def _event_out(event: MessageEvent, labels: dict[str, tuple[str, str]]) -> EventOut:
+    payload = (
+        _labelled_payload(event.payload, labels)
+        if event.kind == "citation_check"
+        else event.payload
+    )
+    return EventOut(seq=event.seq, kind=event.kind, payload=payload)
+
+
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetailOut)
 async def get_conversation_detail(request: Request, conversation_id: UUID) -> ConversationDetailOut:
     async with request.app.state.session_factory() as session:
@@ -191,6 +238,7 @@ async def get_conversation_detail(request: Request, conversation_id: UUID) -> Co
             raise HTTPException(
                 status_code=404, detail={"code": "conversation_not_found"}
             ) from None
+        labels = await _version_labels(session)
     return ConversationDetailOut(
         conversation=_conversation_out(detail.conversation),
         messages=[
@@ -201,10 +249,7 @@ async def get_conversation_detail(request: Request, conversation_id: UUID) -> Co
                 status=message.status,
                 error=message.error,
                 created_at=message.created_at,
-                events=[
-                    EventOut(seq=event.seq, kind=event.kind, payload=event.payload)
-                    for event in message.events
-                ],
+                events=[_event_out(event, labels) for event in message.events],
             )
             for message in detail.messages
         ],

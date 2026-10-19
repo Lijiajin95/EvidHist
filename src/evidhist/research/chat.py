@@ -97,7 +97,9 @@ def answer_prompt(request: ChatRequest, results: Sequence[dict[str, object]]) ->
             f"研究问题：{request.question}",
             "工具结果（JSON）：",
             json.dumps(results, ensure_ascii=False),
-            "要求：先给结论，再给依据（作品/卷次/区间），最后一句说明不确定之处；不得声称无法核实的内容。",
+            "要求：先给结论，再给依据——出处写「材料名·卷次」，并附逐字原文引文；",
+            "正文里不要出现内部标识（不要输出 version_id、UUID、编号）与码点区间等数字；",
+            "最后一句说明不确定之处；不得声称无法核实的内容。",
         ]
     )
 

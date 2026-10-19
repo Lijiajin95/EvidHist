@@ -284,3 +284,19 @@ def test_claims_prompt_requires_a_quotable_span() -> None:
 
     assert "8-60 字" in prompt
     assert "关键词不算引文" in prompt
+
+
+def test_answer_prompt_keeps_internal_identifiers_out_of_the_prose() -> None:
+    from evidhist.research.chat import ChatRequest, answer_prompt
+
+    class _Toolbox:
+        async def call(self, name: str, arguments: dict[str, object]) -> dict[str, object]:
+            return {}
+
+    prompt = answer_prompt(
+        ChatRequest(question="问题", materials=MATERIALS, toolbox=_Toolbox()), []
+    )
+
+    assert "材料名·卷次" in prompt
+    assert "不要出现内部标识" in prompt
+    assert "（作品/卷次/区间）" not in prompt

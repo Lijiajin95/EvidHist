@@ -181,3 +181,116 @@ def test_a_failed_pi_run_is_recorded_as_failed(
     assistant = next(item for item in body["messages"] if item["role"] == "assistant")
     assert assistant["status"] == "failed"
     assert assistant["error"] == "timeout"
+
+
+async def _seed_old_citation(database_url: str) -> str:
+    """造一条「旧格式」消息：引文载荷只有编号与区间，没有作品与卷次。"""
+    engine = create_engine(database_url)
+    session_factory = create_session_factory(engine)
+    async with session_factory() as session:
+        source = SourceRow(title="明通鑑", origin="测试", usage_terms="测试")
+        session.add(source)
+        await session.flush()
+        version = TextVersionRow(
+            source_id=source.id,
+            label="卷029|抓取时间|sha256:abc",
+            content="京師",
+            content_sha256="abc",
+        )
+        session.add(version)
+        conversation = ConversationRow(title="旧会话")
+        session.add(conversation)
+        await session.flush()
+        message = MessageRow(
+            conversation_id=conversation.id, role="assistant", status="done", content="旧回答"
+        )
+        session.add(message)
+        await session.flush()
+        session.add(
+            MessageEventRow(
+                message_id=message.id,
+                seq=1,
+                kind="citation_check",
+                payload={
+                    "statement": "京師指北京。",
+                    "ok": True,
+                    "citations": [
+                        {
+                            "version_id": str(version.id),
+                            "start": 0,
+                            "end": 2,
+                            "exact_quote": "京師",
+                            "ok": True,
+                            "code": None,
+                        }
+                    ],
+                },
+            )
+        )
+        await session.commit()
+        conversation_id = str(conversation.id)
+    await engine.dispose()
+    return conversation_id
+
+
+async def test_stored_citations_gain_material_labels_on_read(
+    chat_client: TestClient, database_url: str
+) -> None:
+    """旧会话的引文载荷没有作品与卷次：读取时补齐，界面才能显示材料·卷次。"""
+    conversation_id = await _seed_old_citation(database_url)
+
+    body = chat_client.get(f"/v1/conversations/{conversation_id}").json()
+
+    citation = body["messages"][0]["events"][0]["payload"]["citations"][0]
+    assert citation["work"] == "明通鑑"
+    assert citation["volume"] == "卷029"
+    assert citation["exact_quote"] == "京師"
+
+
+async def test_legacy_citation_edge_cases_survive_reading(
+    chat_client: TestClient, database_url: str
+) -> None:
+    """旧格式的畸形引文（非对象项、无 citations 字段）读取时原样保留，不报错。"""
+    engine = create_engine(database_url)
+    factory = create_session_factory(engine)
+    async with factory() as session:
+        conversation = ConversationRow(title="畸形旧会话")
+        session.add(conversation)
+        await session.flush()
+        message = MessageRow(
+            conversation_id=conversation.id, role="assistant", status="done", content="旧回答"
+        )
+        session.add(message)
+        await session.flush()
+        session.add_all(
+            [
+                MessageEventRow(
+                    message_id=message.id,
+                    seq=1,
+                    kind="citation_check",
+                    payload={
+                        "statement": "缺字段",
+                        "ok": False,
+                        "citations": ["raw", {"exact_quote": "京師"}],
+                    },
+                ),
+                MessageEventRow(
+                    message_id=message.id,
+                    seq=2,
+                    kind="citation_check",
+                    payload={"statement": "无引文数组", "ok": False},
+                ),
+            ]
+        )
+        await session.commit()
+        conversation_id = str(conversation.id)
+    await engine.dispose()
+
+    body = chat_client.get(f"/v1/conversations/{conversation_id}").json()
+
+    events = body["messages"][0]["events"]
+    assert events[0]["payload"]["citations"] == [
+        "raw",
+        {"exact_quote": "京師", "work": "", "volume": ""},
+    ]
+    assert events[1]["payload"] == {"statement": "无引文数组", "ok": False}
