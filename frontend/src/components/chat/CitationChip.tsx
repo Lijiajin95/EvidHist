@@ -1,7 +1,4 @@
 interface CitationView {
-  version_id: string;
-  start: number;
-  end: number;
   exact_quote: string;
   ok: boolean;
   code: string | null;
@@ -18,9 +15,6 @@ function readCitation(item: unknown): CitationView | null {
     return null;
   }
   return {
-    version_id: entry.version_id,
-    start: typeof entry.start === "number" ? entry.start : 0,
-    end: typeof entry.end === "number" ? entry.end : 0,
     exact_quote: entry.exact_quote,
     ok: entry.ok === true,
     code: typeof entry.code === "string" ? entry.code : null,
@@ -39,14 +33,15 @@ function readCitations(payloads: Record<string, unknown>[]): CitationView[] {
   });
 }
 
-function label(citation: CitationView): string {
-  const parts = [citation.work, citation.volume].filter(
-    (part): part is string => typeof part === "string" && part !== "",
+/** 出处只写材料名与卷次；缺标签时如实说「未标注」，绝不回退到内部编号。 */
+export function citationSource(work?: string, volume?: string): string {
+  const parts = [work, volume].filter(
+    (part): part is string => typeof part === "string" && part.trim() !== "",
   );
-  return parts.length > 0 ? parts.join("·") : citation.version_id.slice(0, 8);
+  return parts.length > 0 ? parts.join("·") : "出处未标注";
 }
 
-/** 引文卡片：逐字引文、出处区间与程序校验结果（只读展示）。 */
+/** 引文卡片：原文 + 材料·卷次 + 程序校验结果（不显示内部标识与码点区间）。 */
 export function CitationList({ citations }: { citations: Record<string, unknown>[] }) {
   const views = readCitations(citations);
   if (views.length === 0) {
@@ -56,13 +51,13 @@ export function CitationList({ citations }: { citations: Record<string, unknown>
     <ul className="chat-citations" aria-label="引文校验">
       {views.map((citation, index) => (
         <li
-          key={`${citation.version_id}-${String(citation.start)}-${String(index)}`}
+          key={`${citation.exact_quote}-${String(index)}`}
           className={`chat-citation${citation.ok ? "" : " failed"}`}
         >
           <span className="chat-citation-quote">{citation.exact_quote}</span>
           <span className="chat-citation-source">
-            {label(citation)} {citation.start}-{citation.end}
-            {citation.ok ? "· 通过程序校验" : `· ${citation.code ?? "未通过"}`}
+            {citationSource(citation.work, citation.volume)}
+            {citation.ok ? " · 通过程序校验" : ` · ${citation.code ?? "未通过"}`}
           </span>
         </li>
       ))}

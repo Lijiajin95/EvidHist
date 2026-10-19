@@ -505,3 +505,41 @@ dl div {
     font-size: 1.35rem;
   }
 }
+
+.chat-tool-list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+}
+
+.chat-tool-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  border-left: 2px solid #e3e5e9;
+  padding-left: 0.5rem;
+}
+
+.chat-tool-source {
+  color: #4b5563;
+  font-weight: 600;
+}
+
+.chat-tool-quote {
+  margin: 0;
+  color: #1f2329;
+}
+
+.chat-tool-context {
+  margin: 0;
+  color: #6b7280;
+}
+
+.chat-note {
+  margin: 0.35rem 0 0;
+  color: #9aa0a6;
+  font-size: 0.75rem;
+}

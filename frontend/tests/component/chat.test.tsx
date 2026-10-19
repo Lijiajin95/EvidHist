@@ -163,7 +163,8 @@ describe("chat view", () => {
     expect(await screen.findByRole("heading", { name: "结论" })).toBeInTheDocument();
     expect(screen.getByText(/search · 命中 1 处/)).toBeInTheDocument();
     expect(screen.getByText("于謙請駐兵居庸，寇來則出關勦殺，退則就糧京師。")).toBeInTheDocument();
-    expect(screen.getByText(/明通鑑·卷029 3587-3610/)).toBeInTheDocument();
+    expect(screen.getByText(/明通鑑·卷029/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain("3587");
     expect(screen.getByText("评审：pass")).toBeInTheDocument();
   });
 
@@ -298,5 +299,20 @@ describe("chat streaming controls", () => {
 
     await waitFor(() => expect(stopCalls).toContain("88888888-8888-4888-8888-888888888888"));
     expect(await screen.findByRole("alert")).toHaveTextContent("已中止本轮生成。");
+  });
+});
+
+describe("conversation sidebar", () => {
+  it("collapses and expands the conversation list", async () => {
+    handlers();
+    render(<ChatView />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "收起会话" }));
+    expect(screen.queryByRole("button", { name: "开启新对话" })).toBeNull();
+    expect(screen.getByRole("button", { name: "展开会话" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "展开会话" }));
+    expect(await screen.findByRole("button", { name: "开启新对话" })).toBeInTheDocument();
   });
 });
