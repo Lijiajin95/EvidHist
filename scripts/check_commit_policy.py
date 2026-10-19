@@ -37,11 +37,15 @@ def load_policy() -> CommitPolicy:
             frozenset(date.fromisoformat(value) for value in data["holidays"]),
             frozenset(date.fromisoformat(value) for value in data["extra_workdays"]),
         )
+    enforce = config.get("enforce_blocked_window", True)
+    if type(enforce) is not bool:
+        raise ValueError("enforce_blocked_window must be a boolean")
     return CommitPolicy(
         ZoneInfo(config["timezone"]),
         time.fromisoformat(config["blocked_start"]),
         time.fromisoformat(config["blocked_end"]),
         calendars,
+        enforce,
     )
 
 
@@ -113,7 +117,11 @@ def main() -> int:
             base, head = args.audit
             return 0 if audit(base, head, policy) else 1
         else:
-            print(f"Commit policy valid; maintained years: {sorted(policy.calendars)}")
+            state = "enforced" if policy.enforce_blocked_window else "disabled"
+            print(
+                f"Commit policy valid; work-hours restriction: {state}; "
+                f"maintained years: {sorted(policy.calendars)}"
+            )
     except (ValueError, OSError, KeyError, TypeError, subprocess.CalledProcessError) as error:
         print(f"Commit policy check failed: {error}", file=sys.stderr)
         return 1

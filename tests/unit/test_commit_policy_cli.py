@@ -9,6 +9,7 @@ import importlib.util
 import subprocess
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from types import ModuleType
@@ -75,6 +76,12 @@ def log_line(subject: str, author: str = COMPLIANT_STAMP, committer: str | None 
     return "\0".join([HEAD_SHA, author, committer if committer else author, subject])
 
 
+def enforce(monkeypatch: MonkeyPatch, cli: ModuleType) -> None:
+    """把仓库配置替换成「启用工作时段限制」的策略，单独验证机制本身仍有效。"""
+    policy = cli.load_policy()
+    monkeypatch.setattr(cli, "load_policy", lambda: replace(policy, enforce_blocked_window=True))
+
+
 def run_cli(monkeypatch: MonkeyPatch, cli: ModuleType, argv: Sequence[str]) -> int:
     monkeypatch.setattr(sys, "argv", ["check_commit_policy", *argv])
     return int(cli.main())
@@ -92,12 +99,20 @@ def test_check_now_rejects_injected_workday_noon_and_allows_evening(
     monkeypatch: MonkeyPatch, cli: ModuleType, capsys: CaptureFixture[str]
 ) -> None:
     FrozenDatetime.frozen_now = datetime.fromisoformat(BLOCKED_STAMP)
+    enforce(monkeypatch, cli)
     assert run_cli(monkeypatch, cli, ["--check-now"]) == 1
     assert "Commit blocked" in capsys.readouterr().err
 
     FrozenDatetime.frozen_now = datetime.fromisoformat("2026-10-09T19:00:00+08:00")
     assert run_cli(monkeypatch, cli, ["--check-now"]) == 0
     assert capsys.readouterr().err == ""
+
+
+def test_repository_config_no_longer_blocks_workday_hours(
+    monkeypatch: MonkeyPatch, cli: ModuleType
+) -> None:
+    """本机不受工作时段限制：仓库配置关闭限制后，调休工作日午间也放行。"""
+    assert run_cli(monkeypatch, cli, ["--check-now"]) == 0
 
 
 def test_check_now_in_an_unmaintained_year_allows_but_prompts_calendar_maintenance(
@@ -185,9 +200,24 @@ def test_audit_rejects_a_new_commit_when_either_timestamp_is_blocked(
         {"HEAD": HEAD_SHA, BASE_SHA: BASE_SHA},
         [log_line("feat: x", author, committer)],
     )
+    enforce(monkeypatch, cli)
 
     assert run_cli(monkeypatch, cli, ["--audit", BASE_SHA, "HEAD"]) == 1
     assert f"Rejected commit {HEAD_SHA[:12]}" in capsys.readouterr().err
+
+
+def test_audit_accepts_blocked_timestamps_with_the_repository_config(
+    monkeypatch: MonkeyPatch, cli: ModuleType
+) -> None:
+    """本仓库已关闭工作时段限制：审计同样按关闭后的配置放行。"""
+    install_git(
+        monkeypatch,
+        cli,
+        {"HEAD": HEAD_SHA, BASE_SHA: BASE_SHA},
+        [log_line("feat: x", BLOCKED_STAMP, BLOCKED_STAMP_UTC)],
+    )
+
+    assert run_cli(monkeypatch, cli, ["--audit", BASE_SHA, "HEAD"]) == 0
 
 
 def test_audit_rejects_new_commits_with_invalid_headers(

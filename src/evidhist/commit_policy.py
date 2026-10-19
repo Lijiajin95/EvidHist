@@ -33,6 +33,7 @@ class CommitPolicy:
     blocked_start: time
     blocked_end: time
     calendars: Mapping[int, WorkdayCalendar]
+    enforce_blocked_window: bool = True
 
     def __post_init__(self) -> None:
         if not self.blocked_start < self.blocked_end:
@@ -50,6 +51,9 @@ def check_commit_time(instant: datetime, policy: CommitPolicy) -> CommitDecision
     if instant.tzinfo is None or instant.utcoffset() is None:
         raise ValueError("Commit timestamps must include a timezone")
     local = instant.astimezone(policy.timezone)
+    if not policy.enforce_blocked_window:
+        hint = None if local.year in policy.calendars else "maintain_annual_calendar"
+        return CommitDecision(True, "blocked_window_disabled", hint)
     if not policy.blocked_start <= local.time() < policy.blocked_end:
         hint = None if local.year in policy.calendars else "maintain_annual_calendar"
         return CommitDecision(True, "outside_work_hours", hint)

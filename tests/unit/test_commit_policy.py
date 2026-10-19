@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from datetime import UTC, date, datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -125,3 +126,30 @@ def test_offset_crossing_midnight_is_classified_on_the_beijing_date(policy: Comm
 
     assert decision.allowed
     assert decision.reason == "outside_work_hours"
+
+
+def test_disabling_enforcement_allows_commits_inside_workday_hours(
+    policy: CommitPolicy,
+) -> None:
+    """本机不再受工作时段限制：开关关闭后，调休工作日午间也允许提交。"""
+    relaxed = replace(policy, enforce_blocked_window=False)
+
+    decision = check_commit_time(datetime.fromisoformat("2026-10-10T12:00:00+08:00"), relaxed)
+
+    assert decision.allowed is True
+    assert decision.reason == "blocked_window_disabled"
+
+
+def test_disabled_enforcement_still_reminds_about_missing_calendars(
+    policy: CommitPolicy,
+) -> None:
+    relaxed = replace(policy, enforce_blocked_window=False)
+
+    decision = check_commit_time(datetime.fromisoformat("2027-03-01T12:00:00+08:00"), relaxed)
+
+    assert decision.allowed is True
+    assert decision.hint == "maintain_annual_calendar"
+
+
+def test_enforcement_remains_the_default(policy: CommitPolicy) -> None:
+    assert policy.enforce_blocked_window is True

@@ -4,7 +4,7 @@ EvidHist 是个人开发维护、计划在 GitHub 开源代码的产品。代码
 
 ## 提交时间限制
 
-**北京时间（Asia/Shanghai），法定调休工作日的 09:00（含）至 18:00（不含）禁止创建 commit。** 午间仍在禁止窗口内。周末如被安排为调休工作日，同样禁止；法定放假日按已维护日历处理。
+**提交时段限制当前已关闭（`enforce_blocked_window = false`，2026-10-19 由项目所有者决定：当前 Debian 开发机不受工作时间限制）。** 机制本身完整保留：把 `config/commit-policy.toml` 里的 `enforce_blocked_window` 改回 `true` 即恢复「北京时间（Asia/Shanghai）法定调休工作日 09:00（含）至 18:00（不含）禁止 commit」的规则（午间同样在窗口内；被安排为调休工作日的周末同样禁止；法定放假日按已维护日历处理）。
 
 策略存放在 `config/commit-policy.toml`，年度安排存放在 `config/workday-calendars/`，每份日历附官方出处和核验日期。2026 年按国务院办公厅通知维护，包括 1 月 4 日、2 月 14/28 日、5 月 9 日、9 月 20 日和 10 月 10 日的调休工作日。[官方通知](https://www.beijing.gov.cn/zhengce/zhengcefagui/202511/t20251104_4258873.html)
 

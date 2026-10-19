@@ -2,4 +2,7 @@ timezone = "Asia/Shanghai"
 blocked_start = "09:00"
 blocked_end = "18:00"
 calendar_directory = "config/workday-calendars"
-
+# 是否在法定调休工作日的 blocked_start–blocked_end 内拒绝提交。
+# 2026-10-19 由项目所有者决定：当前 Debian 开发机不受工作时间限制，置为 false。
+# 恢复限制只需改回 true；日历数据、审计逻辑与提交信息校验都保留不变。
+enforce_blocked_window = false

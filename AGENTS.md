@@ -11,7 +11,7 @@ EvidHist 是个人产品项目，代码计划在 GitHub 开源。以实际用户
 - 单元测试验证公共行为与业务不变量；外部边界另做真实集成；核心规则使用属性及变异检查。
 - 运行 `make check`，按影响运行数据库、系统、变异或安全检查。API 变更同时更新并核对契约快照。
 - 仅在用户要求提交时创建 commit；先检查 `config/commit-policy.toml` 和年度日历。
-- Asia/Shanghai 法定调休工作日 09:00（含）至 18:00（不含）禁止 commit。缺失年份在该窗口内拒绝提交。
+- 提交时段限制由 `config/commit-policy.toml` 的 `enforce_blocked_window` 控制；当前为 `false`（本机不受工作时间限制，2026-10-19 决定）。置为 `true` 时恢复「Asia/Shanghai 法定调休工作日 09:00（含）至 18:00（不含）禁止 commit，缺失年份在该窗口内拒绝提交」。
 - 禁止使用 `--no-verify`、禁用 hooks、修改时钟或伪造作者/提交者时间绕过规则；提交消息遵循项目 Conventional Commits 约定。
 - 原创代码与资料保持独立开发；第三方史料及依赖保留原许可。
 - 完成声明区分实际执行、配置完成与后续方案，不能把 fixture、空测试或工具正常退出当作真实产品质量结果。
